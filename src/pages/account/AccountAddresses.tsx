@@ -107,19 +107,34 @@ export function AccountAddresses() {
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
     try {
+      const formData = { ...addressForm };
+      
       if (selectedAddress) {
         await updateAddress({
           id: selectedAddress.id,
           user_id: user?.id,
-          ...addressForm
+          ...formData
         });
       } else {
-        await addAddress(addressForm);
+        await addAddress(formData);
       }
+      
+      await loadAddresses();
       setIsAddressDialogOpen(false);
-      loadAddresses();
+      setAddressForm({
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
+        postal_code: '',
+        city: '',
+        state: '',
+        is_default: false
+      });
+      toast.success(selectedAddress ? 'Endereço atualizado com sucesso!' : 'Endereço adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar endereço:', error);
+      toast.error('Erro ao salvar endereço');
     }
   };
 

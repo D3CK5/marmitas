@@ -32,7 +32,7 @@ import { useProfile } from "@/hooks/useProfile";
 const profileSchema = z.object({
   full_name: z.string().min(3, "Nome muito curto"),
   email: z.string().email("Email inválido"),
-  phone: z.string().min(14, "Telefone inválido"),
+  phone: z.string().min(15, "Telefone inválido").regex(/^\(\d{2}\) \d{5}-\d{4}$/, "Formato inválido"),
 });
 
 const passwordSchema = z.object({
@@ -82,12 +82,25 @@ export function AccountProfile() {
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      try {
-        await uploadAvatar(file);
-      } catch (error) {
-        console.error('Erro ao fazer upload:', error);
-      }
+    if (!file) return;
+
+    // Validar tipo do arquivo
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato de arquivo não suportado. Use JPG ou PNG.');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await uploadAvatar(file);
+      // Limpar input após upload bem sucedido
+      event.target.value = '';
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -134,20 +147,23 @@ export function AccountProfile() {
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
-              <Label htmlFor="avatar" className="cursor-pointer">
-                <Button variant="outline" className="cursor-pointer" disabled={isLoading}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Alterar foto
-                </Button>
-              </Label>
               <Input
                 id="avatar"
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept="image/jpeg,image/png"
                 onChange={handleAvatarChange}
-                disabled={isLoading}
+                disabled={isProfileLoading || isLoading}
               />
+              <Button 
+                variant="outline" 
+                className="cursor-pointer" 
+                disabled={isProfileLoading || isLoading}
+                onClick={() => document.getElementById('avatar')?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {isProfileLoading || isLoading ? 'Enviando...' : 'Alterar foto'}
+              </Button>
               <p className="text-sm text-muted-foreground">
                 Formatos aceitos: JPG, PNG. Tamanho máximo: 2MB
               </p>
@@ -209,8 +225,13 @@ export function AccountProfile() {
                   Telefone
                 </Label>
                 <IMaskInput
+                  id="phone"
                   mask="(00) 00000-0000"
-                  {...profileForm.register("phone")}
+                  placeholder="(00) 00000-0000"
+                  value={profileForm.watch("phone") || ""}
+                  onAccept={(value) => {
+                    profileForm.setValue("phone", value, { shouldValidate: true });
+                  }}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isLoading}
                 />

@@ -51,7 +51,7 @@ export function useProfile() {
       
       // Atualizar perfil no Supabase
       const { error: profileError } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .update({
           full_name: data.full_name,
           phone: data.phone,
@@ -101,42 +101,57 @@ export function useProfile() {
     try {
       setIsLoading(true);
 
+      if (!user?.id) {
+        throw new Error('Usuário não identificado');
+      }
+
       // Validar tamanho do arquivo (2MB)
       if (file.size > 2 * 1024 * 1024) {
         throw new Error('Arquivo muito grande. Máximo 2MB.');
       }
 
-      // Gerar nome único para o arquivo
+      // Gerar nome único para o arquivo com timestamp
       const fileExt = file.name.split('.').pop();
-      const fileName = `avatar-${user?.id}-${Math.random()}.${fileExt}`;
+      const timestamp = new Date().getTime();
+      const filePath = `avatars/${user.id}/avatar-${timestamp}.${fileExt}`;
 
-      // Upload para o bucket
+      // Remover avatar anterior se existir
+      if (user.avatar_url) {
+        try {
+          const oldPath = user.avatar_url.split('/').slice(-3).join('/');
+          await supabase.storage
+            .from('images')
+            .remove([oldPath]);
+        } catch (error) {
+          console.error('Erro ao remover avatar antigo:', error);
+        }
+      }
+
+      // Upload para o bucket na pasta correta
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
+        .from('images')
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
+        .from('images')
+        .getPublicUrl(filePath);
 
       // Atualizar avatar_url no perfil
       const { error: updateError } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', user?.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
       // Atualizar dados do usuário no contexto
-      if (user) {
-        setUser({
-          ...user,
-          avatar_url: publicUrl
-        });
-      }
+      setUser({
+        ...user,
+        avatar_url: publicUrl
+      });
 
       toast.success('Foto atualizada com sucesso!');
       return publicUrl;
@@ -172,10 +187,12 @@ export function useProfile() {
 
       // Se o novo endereço for padrão, remover o padrão dos outros
       if (address.is_default) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('user_addresses')
           .update({ is_default: false })
           .eq('user_id', user?.id);
+
+        if (updateError) throw updateError;
       }
 
       const { error } = await supabase
@@ -204,11 +221,13 @@ export function useProfile() {
 
       // Se o endereço atualizado for padrão, remover o padrão dos outros
       if (address.is_default) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('user_addresses')
           .update({ is_default: false })
           .eq('user_id', user?.id)
           .neq('id', address.id);
+
+        if (updateError) throw updateError;
       }
 
       const { error } = await supabase
