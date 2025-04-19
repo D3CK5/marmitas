@@ -1,0 +1,35 @@
+# Marmitas Infrastructure 
+# Example Variable Definitions
+# Copy this file to terraform.tfvars and update values
+
+# Global Variables
+environment = "development"  # Or "testing", "production"
+aws_region  = "us-east-1"
+
+# Networking Variables
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b", "us-east-1c"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+
+# Frontend Variables
+domain_name          = "example.com"
+certificate_arn      = "arn:aws:acm:us-east-1:123456789012:certificate/abcd1234-example"
+frontend_container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/marmitas-frontend:latest"
+frontend_container_port  = 80
+frontend_desired_capacity = 2
+frontend_min_capacity     = 1
+frontend_max_capacity     = 5
+
+# Backend Variables
+backend_container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/marmitas-backend:latest"
+backend_container_port  = 3000
+backend_desired_capacity = 2
+backend_min_capacity     = 1
+backend_max_capacity     = 5
+
+# Database Variables
+db_name           = "marmitas"
+db_username       = "admin"           # Use environment variables or AWS Secrets Manager in production
+db_password       = "securepassword"  # Use environment variables or AWS Secrets Manager in production
+db_instance_class = "db.t3.small" 

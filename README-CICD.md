@@ -19,8 +19,12 @@ marmitas/
 │   ├── setup-github-secrets.sh        # Script para configurar segredos no GitHub
 │   └── check-cicd-prerequisites.js    # Script para verificar pré-requisitos do CI/CD
 ├── marmitas-backend/       # Código do backend
+│   ├── Dockerfile          # Configuração Docker para produção
+│   ├── Dockerfile.dev      # Configuração Docker para desenvolvimento
 │   └── ...
 └── marmitas-frontend/      # Código do frontend
+    ├── Dockerfile          # Configuração Docker para produção
+    ├── Dockerfile.dev      # Configuração Docker para desenvolvimento
     └── ...
 ```
 
@@ -31,6 +35,7 @@ marmitas/
 - Conta no GitHub com permissões para o repositório
 - Git instalado localmente
 - Node.js versão 20 ou superior
+- Docker e Docker Compose instalados
 - GitHub CLI (para configuração de segredos)
 
 ### Verificação dos Pré-requisitos
@@ -72,6 +77,20 @@ Este script irá guiá-lo no processo de configuração dos seguintes segredos:
 2. Execute testes localmente
 3. Crie um Pull Request para o branch `develop`
 
+#### Utilizando Docker para Desenvolvimento
+
+Para facilitar o desenvolvimento local, você pode usar o Docker Compose:
+
+```bash
+# Iniciar ambiente de desenvolvimento
+docker-compose -f docker-compose.dev.yml up -d
+
+# Parar ambiente de desenvolvimento
+docker-compose -f docker-compose.dev.yml down
+```
+
+Isso iniciará o frontend na porta 3000 e o backend na porta 3001, com hot-reloading ativado para ambos.
+
 ### Integração Contínua
 
 Ao criar um Pull Request ou fazer push para os branches `develop` ou `main`:
@@ -87,6 +106,26 @@ Quando o código é mergeado nos branches principais:
 
 - **Branch `develop`**: O código é implantado automaticamente no ambiente de desenvolvimento
 - **Branch `main`**: O código é implantado automaticamente no ambiente de produção
+
+## Containerização
+
+O projeto utiliza Docker para containerização dos componentes:
+
+### Ambientes de Produção
+
+```bash
+# Construir e iniciar os contêineres de produção
+docker-compose up -d --build
+
+# Parar os contêineres
+docker-compose down
+```
+
+### Configuração de Contêineres
+
+- **Frontend**: Nginx servindo arquivos estáticos do React/Vite
+- **Backend**: Node.js com Express
+- **Ambos**: Incluem verificações de saúde e configuração de variáveis de ambiente
 
 ## Monitoramento
 
@@ -104,6 +143,13 @@ Se o pipeline falhar, verifique:
 2. **Pré-requisitos**: Execute o script de verificação de pré-requisitos
 3. **Segredos**: Verifique se todos os segredos necessários estão configurados
 4. **Configurações do Ambiente**: Verifique se os ambientes estão configurados corretamente
+5. **Problemas de Docker**: Verifique os logs dos contêineres usando `docker logs`
+
+### Problemas Comuns
+
+- **Falha na migração do banco de dados**: Verifique as credenciais do Supabase e o formato dos arquivos SQL
+- **Falha no build**: Verifique por erros de dependências ou problemas de sintaxe no código
+- **Falha na implantação**: Verifique as credenciais SSH e permissões do servidor
 
 ## Documentação Adicional
 
@@ -112,6 +158,7 @@ Para mais detalhes, consulte:
 - [Documentação do CI/CD Unificado](docs/cicd-process.md)
 - [Documentação do CI/CD do Backend](marmitas-backend/docs/cicd-process.md)
 - [Documentação do CI/CD do Frontend](marmitas-frontend/docs/cicd-process.md)
+- [Documentação de Containerização](docs/containerization.md)
 
 ## Manutenção
 
@@ -122,6 +169,14 @@ Se precisar atualizar o workflow do CI/CD:
 1. Edite o arquivo `.github/workflows/ci-cd.yml`
 2. Teste as alterações usando validadores de YAML
 3. Faça commit e push para ver as alterações em ação
+
+### Gerenciar Ambientes de Implantação
+
+Os ambientes de implantação podem ser gerenciados na seção "Settings > Environments" do repositório GitHub. Você pode configurar:
+
+- Proteções de branch
+- Revisores necessários
+- Tempo de espera antes da implantação
 
 ### Remover Workflows Duplicados
 
@@ -141,4 +196,5 @@ Ao contribuir com o projeto, respeite o fluxo de CI/CD:
 
 1. Não ignore falhas nos testes
 2. Não faça merge de PRs que falham na verificação de CI
-3. Teste migrações de banco de dados localmente antes de enviar 
+3. Teste migrações de banco de dados localmente antes de enviar
+4. Garanta que as mudanças de infraestrutura sejam testadas através de contêineres Docker 

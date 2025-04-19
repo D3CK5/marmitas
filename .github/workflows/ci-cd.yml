@@ -244,28 +244,45 @@ jobs:
           npm run db:migrate
       
       - name: Deploy Backend to Development Server
-        working-directory: ./marmitas-backend
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEV_HOST }}
           DEPLOY_USER: ${{ secrets.DEV_USER }}
         run: |
           echo "Deploying backend to development server..."
-          # Replace with actual deployment commands for your environment
-          # Example: SSH/SCP commands to copy files and restart service
-          echo "Backend deployment to development completed"
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./marmitas-backend/dist/ $DEPLOY_USER@$DEPLOY_HOST:/var/www/marmitas-backend/
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST \
+            "cd /var/www/marmitas-backend && pm2 reload marmitas-backend || pm2 start dist/index.js --name marmitas-backend"
       
       - name: Deploy Frontend to Development Server
-        working-directory: ./marmitas-frontend
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEV_HOST }}
           DEPLOY_USER: ${{ secrets.DEV_USER }}
         run: |
           echo "Deploying frontend to development server..."
-          # Replace with actual deployment commands for your environment
-          # Example: aws s3 sync ./dist s3://dev-marmitas-bucket/
-          echo "Frontend deployment to development completed"
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./marmitas-frontend/dist/ $DEPLOY_USER@$DEPLOY_HOST:/var/www/marmitas-frontend/
+      
+      - name: Verify Deployment
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEV_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_USER }}
+        run: |
+          echo "Verifying deployment..."
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST \
+            "curl -s http://localhost:3000/api/health || echo 'Backend health check failed'"
 
   deploy-prod:
     name: Deploy to Production
@@ -305,25 +322,42 @@ jobs:
           npm run db:migrate
       
       - name: Deploy Backend to Production Server
-        working-directory: ./marmitas-backend
         env:
           DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.PROD_HOST }}
           DEPLOY_USER: ${{ secrets.PROD_USER }}
         run: |
           echo "Deploying backend to production server..."
-          # Replace with actual deployment commands for your environment
-          # Example: SSH/SCP commands to copy files and restart service
-          echo "Backend deployment to production completed"
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./marmitas-backend/dist/ $DEPLOY_USER@$DEPLOY_HOST:/var/www/marmitas-backend/
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST \
+            "cd /var/www/marmitas-backend && pm2 reload marmitas-backend || pm2 start dist/index.js --name marmitas-backend"
       
       - name: Deploy Frontend to Production Server
-        working-directory: ./marmitas-frontend
         env:
           DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.PROD_HOST }}
           DEPLOY_USER: ${{ secrets.PROD_USER }}
         run: |
           echo "Deploying frontend to production server..."
-          # Replace with actual deployment commands for your environment
-          # Example: aws s3 sync ./dist s3://prod-marmitas-bucket/
-          echo "Frontend deployment to production completed" 
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./marmitas-frontend/dist/ $DEPLOY_USER@$DEPLOY_HOST:/var/www/marmitas-frontend/
+      
+      - name: Verify Deployment
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_USER }}
+        run: |
+          echo "Verifying deployment..."
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST \
+            "curl -s http://localhost:3000/api/health || echo 'Backend health check failed'" 

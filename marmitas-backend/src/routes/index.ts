@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Router } from 'express';
 import { exampleRoutes } from './example.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import { authRoutes } from './auth.routes.js';
@@ -7,7 +7,7 @@ import { authRoutes } from './auth.routes.js';
 // Example: import userRoutes from './user.routes.js';
 
 // Create router
-const router = express.Router();
+const router = Router();
 
 // API version and documentation
 router.get('/', (req: Request, res: Response) => {
@@ -17,6 +17,12 @@ router.get('/', (req: Request, res: Response) => {
     description: 'Backend API for Marmitas application',
     documentation: '/api/docs'
   });
+});
+
+// Health check endpoint for container monitoring
+router.get('/health', (req, res) => {
+  // Check database connection and other critical services if needed
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Mount routes
