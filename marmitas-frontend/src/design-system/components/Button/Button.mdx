@@ -1,0 +1,58 @@
+# Button Component
+
+The Button component is a versatile and accessible clickable element used throughout the application.
+
+## Usage
+
+```tsx
+import { Button } from '@/design-system/components';
+
+// Basic usage
+<Button>Click Me</Button>
+
+// With variants
+<Button variant="primary">Primary</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="ghost">Ghost</Button>
+<Button variant="link">Link</Button>
+<Button variant="destructive">Delete</Button>
+
+// With sizes
+<Button size="sm">Small</Button>
+<Button size="md">Medium</Button>
+<Button size="lg">Large</Button>
+<Button size="icon"><IconComponent /></Button>
+
+// With loading state
+<Button loading>Loading...</Button>
+
+// With icons
+<Button leftIcon={<LeftIcon />} rightIcon={<RightIcon />}>
+  With Icons
+</Button>
+
+// Disabled state
+<Button disabled>Disabled</Button>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `variant` | `'primary' \| 'secondary' \| 'outline' \| 'ghost' \| 'link' \| 'destructive'` | `'primary'` | Visual style variant |
+| `size` | `'sm' \| 'md' \| 'lg' \| 'icon'` | `'md'` | Size of the button |
+| `loading` | `boolean` | `false` | Shows loading spinner and disables button |
+| `leftIcon` | `ReactNode` | - | Icon to display before button text |
+| `rightIcon` | `ReactNode` | - | Icon to display after button text |
+| `disabled` | `boolean` | `false` | Disables the button |
+| `children` | `ReactNode` | - | Button content |
+
+Plus all standard HTML button attributes.
+
+## Accessibility
+
+- When used as a button that doesn't navigate to a new page, use `<Button>`.
+- When used as a link, use `<a>` with appropriate attributes.
+- The component handles focus states with visible outlines.
+- Loading state automatically disables the button to prevent multiple submissions. 
