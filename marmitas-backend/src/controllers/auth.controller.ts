@@ -12,7 +12,20 @@ export class AuthController {
   async register(req: Request, res: Response): Promise<void> {
     try {
       const result = await authService.register(req.body);
-      apiResponse.success(res, result, 201);
+      
+      // Set HTTP-only cookies for refresh token
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      
+      // Return access token in response body
+      apiResponse.success(res, {
+        user: result.user,
+        accessToken: result.accessToken
+      }, 201);
     } catch (error: any) {
       apiResponse.error(
         res,
@@ -29,7 +42,20 @@ export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
       const result = await authService.login(req.body);
-      apiResponse.success(res, result);
+      
+      // Set HTTP-only cookies for refresh token
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      
+      // Return access token in response body
+      apiResponse.success(res, {
+        user: result.user,
+        accessToken: result.accessToken
+      });
     } catch (error: any) {
       apiResponse.error(
         res,
@@ -41,13 +67,90 @@ export class AuthController {
   }
 
   /**
+   * Refresh the access token
+   */
+  async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      // Get refresh token from cookies
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (!refreshToken) {
+        apiResponse.error(res, 'Refresh token not found', 401, 'INVALID_TOKEN');
+        return;
+      }
+      
+      // Get new tokens
+      const tokens = await authService.refreshToken(refreshToken);
+      
+      if (!tokens) {
+        // Clear the invalid cookie
+        res.clearCookie('refreshToken');
+        apiResponse.error(res, 'Invalid refresh token', 401, 'INVALID_TOKEN');
+        return;
+      }
+      
+      // Set HTTP-only cookies for new refresh token
+      res.cookie('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      
+      // Return new access token
+      apiResponse.success(res, { accessToken: tokens.accessToken });
+    } catch (error: any) {
+      apiResponse.error(
+        res,
+        error.message || 'Token refresh failed',
+        401,
+        'TOKEN_ERROR'
+      );
+    }
+  }
+
+  /**
    * Logout a user
    */
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.split(' ')[1] || '';
-      await authService.logout(token);
+      // Get refresh token from cookies
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+      
+      // Clear the refresh token cookie
+      res.clearCookie('refreshToken');
+      
       apiResponse.success(res, { message: 'Logged out successfully' });
+    } catch (error: any) {
+      apiResponse.error(
+        res,
+        error.message || 'Logout failed',
+        500,
+        'LOGOUT_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Logout a user from all devices
+   */
+  async logoutAll(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        apiResponse.error(res, 'User not authenticated', 401, 'UNAUTHORIZED');
+        return;
+      }
+      
+      await authService.logoutAll(req.user.id);
+      
+      // Clear the refresh token cookie
+      res.clearCookie('refreshToken');
+      
+      apiResponse.success(res, { message: 'Logged out from all devices' });
     } catch (error: any) {
       apiResponse.error(
         res,

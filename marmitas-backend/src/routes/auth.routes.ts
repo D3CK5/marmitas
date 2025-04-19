@@ -20,11 +20,23 @@ router.post(
   authController.login.bind(authController)
 );
 
+// POST /api/auth/refresh - Refresh access token
+router.post(
+  '/refresh',
+  authController.refreshToken.bind(authController)
+);
+
 // POST /api/auth/logout - Logout a user
 router.post(
   '/logout',
-  authenticate,
   authController.logout.bind(authController)
+);
+
+// POST /api/auth/logout-all - Logout a user from all devices
+router.post(
+  '/logout-all',
+  authenticate,
+  authController.logoutAll.bind(authController)
 );
 
 // GET /api/auth/profile - Get current user profile

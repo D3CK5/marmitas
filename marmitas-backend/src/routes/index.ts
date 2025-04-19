@@ -1,35 +1,77 @@
-import express, { Request, Response, Router } from 'express';
-import { exampleRoutes } from './example.routes.js';
-import { docsRoutes } from './docs.routes.js';
-import { authRoutes } from './auth.routes.js';
+import { Router } from 'express';
+import { apiGateway } from '../config/api-gateway.config.js';
 
-// Import route modules
-// Example: import userRoutes from './user.routes.js';
+// Import routes
+import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
+import productRoutes from './product.routes.js';
+import orderRoutes from './order.routes.js';
+import categoryRoutes from './category.routes.js';
+import foodRoutes from './food.routes.js';
+import addressRoutes from './address.routes.js';
 
 // Create router
-const router = Router();
+export const apiRoutes = Router();
 
-// API version and documentation
-router.get('/', (req: Request, res: Response) => {
+// Register routes
+// Public routes that don't require authentication
+apiGateway.registerRoute('/auth', authRoutes, {
+  authRequired: false,
+  rateLimitMax: 20, // More strict rate limiting for auth endpoints
+  isHighlySensitive: true, // Mark auth endpoints as highly sensitive
+  description: 'Authentication endpoints'
+});
+
+// Protected routes
+apiGateway.registerRoute('/users', userRoutes, {
+  authRequired: true,
+  description: 'User management endpoints'
+});
+
+apiGateway.registerRoute('/products', productRoutes, {
+  authRequired: false, // Public access for reading, auth checked in controllers for write
+  description: 'Product management endpoints'
+});
+
+apiGateway.registerRoute('/orders', orderRoutes, {
+  authRequired: true,
+  description: 'Order management endpoints'
+});
+
+apiGateway.registerRoute('/categories', categoryRoutes, {
+  authRequired: false, // Public access for reading, auth checked in controllers for write
+  description: 'Category management endpoints'
+});
+
+apiGateway.registerRoute('/foods', foodRoutes, {
+  authRequired: false, // Public access for reading, auth checked in controllers for write
+  description: 'Food management endpoints'
+});
+
+apiGateway.registerRoute('/addresses', addressRoutes, {
+  authRequired: true,
+  description: 'Address management endpoints'
+});
+
+// API documentation and status routes
+apiGateway.registerRoute('/status', Router().get('/', (req, res) => {
   res.json({
-    name: 'Marmitas API',
-    version: '1.0.0',
-    description: 'Backend API for Marmitas application',
-    documentation: '/api/docs'
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+}), {
+  authRequired: false,
+  description: 'API status endpoint'
+});
+
+// Version information route
+apiRoutes.get('/version', (req, res) => {
+  res.json({
+    version: process.env.npm_package_version || '0.1.0',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Health check endpoint for container monitoring
-router.get('/health', (req, res) => {
-  // Check database connection and other critical services if needed
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Mount routes
-// Example: router.use('/users', userRoutes);
-router.use('/examples', exampleRoutes);
-router.use('/docs', docsRoutes);
-router.use('/auth', authRoutes);
-
-// Export API routes
-export const apiRoutes = router; 
+export default apiRoutes; 

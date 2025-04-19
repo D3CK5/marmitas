@@ -1,0 +1,68 @@
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+/**
+ * Application configuration
+ */
+export const config = {
+  app: {
+    port: process.env.PORT || 3000,
+    httpsPort: process.env.HTTPS_PORT || 3443,
+    nodeEnv: process.env.NODE_ENV || 'development',
+    apiPrefix: process.env.API_PREFIX || '/api',
+    corsOrigin: process.env.CORS_ORIGIN || '*',
+    httpsEnabled: process.env.HTTPS_ENABLED === 'true',
+    forceHttps: process.env.FORCE_HTTPS === 'true'
+  },
+  jwt: {
+    accessTokenSecret: process.env.JWT_ACCESS_SECRET,
+    refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
+    accessTokenExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
+    refreshTokenExpiry: process.env.JWT_REFRESH_EXPIRY || '7d'
+  },
+  security: {
+    bcryptSaltRounds: 10,
+    rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+    rateLimitMax: 100, // 100 requests per window
+    hstsMaxAge: 31536000, // 1 year in seconds
+    hstsIncludeSubDomains: true,
+    hstsPreload: true,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        imgSrc: ["'self'", 'data:', 'https://storage.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        connectSrc: ["'self'", 'https://*.marmitas.com'],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: []
+      }
+    },
+    corsSettings: {
+      allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'Origin', 'X-Requested-With'],
+      exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      credentials: true,
+      maxAge: 86400 // 24 hours
+    },
+    // Data encryption settings
+    encryption: {
+      enabled: process.env.ENCRYPTION_ENABLED === 'true',
+      keyPath: process.env.ENCRYPTION_KEY_PATH,
+      keyBackupDir: process.env.ENCRYPTION_KEY_BACKUP_DIR,
+      algorithm: 'aes-256-gcm' // Advanced encryption standard with GCM mode
+    },
+    // Key rotation settings
+    keyRotation: {
+      enabled: process.env.KEY_ROTATION_ENABLED === 'true' || true,
+      keyRotationDays: parseInt(process.env.KEY_ROTATION_DAYS || '90', 10), // Default: 90 days
+      automaticRotation: process.env.AUTOMATIC_KEY_ROTATION === 'true' || true
+    }
+  }
+};
+
+export default config; 

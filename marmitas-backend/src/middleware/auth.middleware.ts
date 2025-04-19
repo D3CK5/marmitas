@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/supabase.js';
 import { apiResponse } from '../utils/api.utils.js';
+import { jwtService } from '../services/jwt.service.js';
 
 /**
  * Extend Express Request type to include user information
@@ -18,9 +19,69 @@ declare global {
 }
 
 /**
+ * Extract token from authorization header or query parameter
+ */
+const extractToken = (req: Request): string | null => {
+  // Try header first
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  
+  // Try query parameter
+  if (req.query && req.query.token) {
+    return req.query.token as string;
+  }
+  
+  return null;
+};
+
+/**
  * Middleware to authenticate requests using JWT token
  */
 export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const token = extractToken(req);
+    
+    if (!token) {
+      apiResponse.error(res, 'Authentication required', 401, 'UNAUTHORIZED');
+      return;
+    }
+    
+    // Verify token
+    const payload = jwtService.verifyAccessToken(token);
+    
+    if (!payload) {
+      apiResponse.error(res, 'Invalid or expired token', 401, 'INVALID_TOKEN');
+      return;
+    }
+    
+    // Attach user to request
+    req.user = {
+      id: payload.userId,
+      email: payload.email,
+      role: payload.role
+    };
+    
+    next();
+  } catch (error) {
+    apiResponse.error(
+      res, 
+      'Authentication failed', 
+      500, 
+      'AUTH_ERROR'
+    );
+  }
+};
+
+/**
+ * Middleware for legacy Supabase token verification - for backward compatibility
+ */
+export const authenticateLegacy = async (
   req: Request,
   res: Response,
   next: NextFunction
