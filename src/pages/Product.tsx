@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -9,38 +8,28 @@ import { NutritionalTable } from "@/components/NutritionalTable";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
-
-// Mock data - será substituído por dados do Supabase
-const MOCK_PRODUCT = {
-  id: 1,
-  title: "Frango Grelhado com Quinoa",
-  description: "Peito de frango grelhado temperado com ervas finas, acompanhado de quinoa cozida e legumes salteados no azeite de oliva extra virgem. Uma refeição balanceada, rica em proteínas e com baixo teor de gordura.",
-  price: 29.90,
-  images: [
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1546069901-d5bfd2cbfb1f?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=500",
-  ],
-  nutritionalInfo: {
-    calories: 380,
-    proteins: 32,
-    carbs: 45,
-    fats: 12,
-    fiber: 6,
-    sodium: 580,
-  },
-};
+import { useParams, useNavigate } from "react-router-dom";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Product() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const { addItem } = useCart();
+  const { data: product, isLoading } = useProducts().useProduct(Number(id));
+
+  if (!id) {
+    navigate('/');
+    return null;
+  }
 
   const handleShare = async () => {
     try {
       await navigator.share({
-        title: MOCK_PRODUCT.title,
-        text: MOCK_PRODUCT.description,
+        title: product?.title,
+        text: product?.description,
         url: window.location.href,
       });
     } catch (error) {
@@ -49,12 +38,14 @@ export default function Product() {
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
+
     addItem(
       {
-        id: MOCK_PRODUCT.id,
-        title: MOCK_PRODUCT.title,
-        price: MOCK_PRODUCT.price,
-        image: MOCK_PRODUCT.images[0],
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        image: product.images[0],
         notes,
       },
       quantity
@@ -62,20 +53,49 @@ export default function Product() {
     toast.success("Produto adicionado ao carrinho!");
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 pt-20 pb-20">
+          <div className="max-w-4xl mx-auto">
+            <Skeleton className="w-full h-[300px] rounded-lg" />
+            <div className="mt-6 space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-8 w-32 mt-2" />
+                </div>
+              </div>
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (!product) {
+    navigate('/');
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <main className="container mx-auto px-4 pt-20 pb-20">
         <div className="max-w-4xl mx-auto">
-          <ImageGallery images={MOCK_PRODUCT.images} title={MOCK_PRODUCT.title} />
+          <ImageGallery images={product.images} title={product.title} />
           
           <div className="mt-6 space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{MOCK_PRODUCT.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{product.title}</h1>
                 <p className="text-2xl font-bold text-primary mt-2">
-                  R$ {MOCK_PRODUCT.price.toFixed(2)}
+                  R$ {product.price.toFixed(2)}
                 </p>
               </div>
               <button
@@ -86,9 +106,11 @@ export default function Product() {
               </button>
             </div>
 
-            <p className="text-gray-600">{MOCK_PRODUCT.description}</p>
+            <p className="text-gray-600">{product.description}</p>
 
-            <NutritionalTable nutritionalInfo={MOCK_PRODUCT.nutritionalInfo} />
+            {product.nutritional_info && (
+              <NutritionalTable nutritionalInfo={product.nutritional_info} />
+            )}
 
             <div className="space-y-4">
               <div>

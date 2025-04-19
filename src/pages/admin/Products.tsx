@@ -280,32 +280,37 @@ export default function Products() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col min-h-screen p-6">
-        <div className="space-y-4 p-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Produtos</h1>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsCategoryDialogOpen(true)}
-              >
-                Gerenciar Categorias
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsManageFoodsOpen(true)}
-              >
-                Gerenciar Alimentos
-              </Button>
-              <ProductFilters 
-                filters={filters}
-                onFiltersChange={setFilters}
-              />
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+      <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold">Produtos</h1>
+            <p className="text-muted-foreground">
+            Gerencie os produtos do seu estabelecimento
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCategoryDialogOpen(true)}
+            >
+              Gerenciar Categorias
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsManageFoodsOpen(true)}
+            >
+              Gerenciar Alimentos
+            </Button>
+            <ProductFilters 
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
+          </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Produto
               </Button>
-            </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -317,7 +322,7 @@ export default function Products() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 id="search"
-                  placeholder="Buscar por nome, descrição, categoria, preço..."
+                placeholder="Buscar por nome, descrição, categoria, preço..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -332,30 +337,29 @@ export default function Products() {
             <FileDown className="mr-2 h-4 w-4" />
             Exportar
           </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsTrashDialogOpen(true)}
-              className="gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-foreground"
-            >
-              <Trash className="h-4 w-4 text-red-500" />
-              <span>Lixeira</span>
-              {deletedProducts?.length > 0 && (
-                <span className="ml-1 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
-                  {deletedProducts.length}
-                </span>
-              )}
-            </Button>
-            {selectedIds.length > 0 && (
-              <Button 
-                variant="destructive" 
-                onClick={handleBulkDelete}
-                className="ml-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir Selecionados ({selectedIds.length})
-          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsTrashDialogOpen(true)}
+            className="gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-foreground"
+          >
+            <Trash className="h-4 w-4 text-red-500" />
+            <span>Lixeira</span>
+            {deletedProducts?.length > 0 && (
+              <span className="ml-1 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+                {deletedProducts.length}
+              </span>
             )}
-          </div>
+          </Button>
+          {selectedIds.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              className="ml-auto"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir Selecionados ({selectedIds.length})
+            </Button>
+          )}
         </div>
 
         <div className="flex-1">

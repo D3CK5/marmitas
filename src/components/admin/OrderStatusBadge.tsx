@@ -1,46 +1,41 @@
-
-import { cn } from "@/lib/utils";
-
-type OrderStatus = "pending" | "awaiting_payment" | "preparing" | "completed" | "cancelled";
+import { Badge } from "@/components/ui/badge";
 
 interface OrderStatusBadgeProps {
-  status: OrderStatus;
+  status: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: {
     label: "Pendente",
-    classes: "bg-yellow-50 text-yellow-700",
+    variant: "secondary"
   },
   awaiting_payment: {
     label: "Aguardando Pagamento",
-    classes: "bg-blue-50 text-blue-700",
+    variant: "outline"
   },
   preparing: {
     label: "Em Preparação",
-    classes: "bg-purple-50 text-purple-700",
+    variant: "default"
   },
   completed: {
     label: "Concluído",
-    classes: "bg-green-50 text-green-700",
+    variant: "default"
   },
   cancelled: {
     label: "Cancelado",
-    classes: "bg-red-50 text-red-700",
-  },
+    variant: "destructive"
+  }
 };
 
 export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || {
+    label: status,
+    variant: "secondary"
+  };
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-        config.classes
-      )}
-    >
+    <Badge variant={config.variant}>
       {config.label}
-    </span>
+    </Badge>
   );
 }

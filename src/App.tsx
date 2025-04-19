@@ -34,6 +34,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { PrivateRoute } from "@/components/PrivateRoute";
 import { useAuthModal } from "@/hooks/useAuthModal";
+import { OrderSuccess } from "./pages/OrderSuccess";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/produto/:id" element={<Product />} />
                 <Route path="/checkout" element={<PrivateRoute> <Checkout /> </PrivateRoute>} />
+                <Route path="/pedido-realizado" element={<OrderSuccess />} />
                 
                 {/* Rotas da área do cliente */}
                 <Route path="/minhaconta" element={<AccountLayout />}>

@@ -1,6 +1,5 @@
 import { Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { AccountNav } from "@/components/account/AccountNav";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/BottomNav";
 
@@ -19,8 +18,6 @@ export function AccountLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AccountNav />
-      
       <div className="pb-28">
         <Outlet />
       </div>

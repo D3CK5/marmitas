@@ -11,3 +11,15 @@ export function formatPrice(price: number) {
     currency: 'BRL'
   }).format(price)
 }
+
+/**
+ * Formata um valor numérico para moeda brasileira (BRL)
+ * @param value Valor a ser formatado
+ * @returns String formatada (ex: R$ 1.234,56)
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value)
+}

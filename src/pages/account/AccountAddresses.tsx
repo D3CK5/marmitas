@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AccountMenu } from "@/components/account/AccountMenu";
 
 // Lista de estados brasileiros
 const ESTADOS_BRASILEIROS = [
@@ -68,14 +69,13 @@ const ESTADOS_BRASILEIROS = [
 export function AccountAddresses() {
   const { user } = useAuth();
   const { 
+    addresses,
     isLoading,
-    getAddresses, 
     addAddress, 
     updateAddress, 
     deleteAddress 
   } = useProfile();
   
-  const [addresses, setAddresses] = useState([]);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -88,45 +88,47 @@ export function AccountAddresses() {
     postal_code: '',
     city: '',
     state: '',
-    is_default: false
+    is_default: false,
+    user_id: user?.id || ''
   });
-
-  useEffect(() => {
-    loadAddresses();
-  }, []);
-
-  const loadAddresses = async () => {
-    try {
-      const data = await getAddresses();
-      setAddresses(data);
-    } catch (error) {
-      console.error('Erro ao carregar endereços:', error);
-    }
-  };
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
     try {
+      const formData = { ...addressForm };
+      
       if (selectedAddress) {
         await updateAddress({
           id: selectedAddress.id,
           user_id: user?.id,
-          ...addressForm
+          ...formData
         });
       } else {
-        await addAddress(addressForm);
+        await addAddress(formData);
       }
+      
       setIsAddressDialogOpen(false);
-      loadAddresses();
+      setAddressForm({
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
+        postal_code: '',
+        city: '',
+        state: '',
+        is_default: false,
+        user_id: user?.id || ''
+      });
+      toast.success(selectedAddress ? 'Endereço atualizado com sucesso!' : 'Endereço adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar endereço:', error);
+      toast.error('Erro ao salvar endereço');
     }
   };
 
   const handleDeleteAddress = async (addressId) => {
     try {
       await deleteAddress(addressId);
-      loadAddresses();
     } catch (error) {
       console.error('Erro ao excluir endereço:', error);
     }
@@ -176,6 +178,8 @@ export function AccountAddresses() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      <AccountMenu />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Meus Endereços</h1>
@@ -193,7 +197,8 @@ export function AccountAddresses() {
             postal_code: '',
             city: '',
             state: '',
-            is_default: false
+            is_default: false,
+            user_id: user?.id || ''
           });
           setIsAddressDialogOpen(true);
         }}>
@@ -276,7 +281,8 @@ export function AccountAddresses() {
                 postal_code: '',
                 city: '',
                 state: '',
-                is_default: false
+                is_default: false,
+                user_id: user?.id || ''
               });
               setIsAddressDialogOpen(true);
             }}>

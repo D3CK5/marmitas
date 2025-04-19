@@ -287,6 +287,35 @@ export function useProducts() {
     return data.publicUrl;
   };
 
+  // Buscar produto por ID
+  const useProduct = (id: number) => {
+    return useQuery({
+      queryKey: ["product", id],
+      queryFn: async () => {
+        try {
+          const { data: product, error } = await supabase
+            .from("products")
+            .select(`
+              *,
+              category:categories(id, name)
+            `)
+            .eq('id', id)
+            .is('deleted_at', null)
+            .single();
+
+          if (error) throw error;
+          return product;
+        } catch (error) {
+          console.error('Erro ao buscar produto:', error);
+          return null;
+        }
+      },
+      retry: 3,
+      retryDelay: 1000,
+      staleTime: 1000 * 60,
+    });
+  };
+
   return {
     products,
     isLoading,
@@ -302,5 +331,6 @@ export function useProducts() {
     updateProduct,
     deleteProduct,
     uploadImage,
+    useProduct
   };
 } 
