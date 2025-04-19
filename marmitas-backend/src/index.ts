@@ -13,6 +13,12 @@ import { apiGateway } from './config/api-gateway.config.js';
 import { logger, logStream } from './utils/logger.utils.js';
 import { securityHeaders } from './middleware/security.middleware.js';
 import { v4 as uuidv4 } from 'uuid';
+import { websocketService } from './services/websocket.service.js';
+import { websocketAuthService } from './services/websocket-auth.service.js';
+import { websocketConnectionService } from './services/websocket-connection.service.js';
+import { websocketSubscriptionService } from './services/websocket-subscription.service.js';
+import { websocketSubscriptionStorageService } from './services/websocket-subscription-storage.service.js';
+import { websocketSubscriptionHandlersService } from './services/websocket-subscription-handlers.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -114,6 +120,19 @@ apiGateway.registerRoute('/', apiRoutes, {
 // Use API Gateway for all API routes
 app.use(config.app.apiPrefix, apiRouter);
 
+// WebSocket metrics endpoint
+app.get(`${config.app.apiPrefix}/websocket-metrics`, (req, res) => {
+  const metrics = {
+    connections: websocketConnectionService.getMetrics(),
+    subscriptions: websocketSubscriptionService.getMetrics(),
+    storage: websocketSubscriptionStorageService.getStats(),
+    handlers: websocketSubscriptionHandlersService.getStats(),
+    timestamp: new Date().toISOString()
+  };
+  
+  res.status(200).json(metrics);
+});
+
 // Not found handler
 app.use(notFoundHandler);
 
@@ -131,6 +150,20 @@ const httpServer = app.listen(httpPort, () => {
     environment: config.app.nodeEnv,
     port: httpPort
   });
+  
+  // Initialize WebSocket server with the HTTP server
+  websocketService.initialize(httpServer);
+  websocketAuthService.initialize();
+  websocketConnectionService.initialize();
+  
+  // Initialize WebSocket subscription services
+  websocketSubscriptionStorageService.initialize();
+  websocketSubscriptionService.initialize();
+  websocketSubscriptionHandlersService.initialize();
+  
+  logger.info('WebSocket server started and ready to accept connections', {
+    path: config.websocket?.path || '/ws'
+  });
 });
 
 // Start HTTPS server if enabled
@@ -144,6 +177,13 @@ if (config.app.httpsEnabled) {
         port: httpsPort,
         tlsVersion: '1.3'
       });
+      
+      // Initialize WebSocket server with the HTTPS server too
+      websocketService.initialize(httpsServer);
+      
+      logger.info('WebSocket server also attached to HTTPS server', {
+        path: config.websocket?.path || '/ws'
+      });
     });
   } else {
     logger.error('HTTPS server could not be started. Check certificate configuration.');
@@ -153,6 +193,10 @@ if (config.app.httpsEnabled) {
 // Handle graceful shutdown
 const gracefulShutdown = (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
+  
+  // Shutdown WebSocket services
+  websocketConnectionService.shutdown();
+  websocketService.shutdown();
   
   // Close HTTP server
   httpServer.close(() => {

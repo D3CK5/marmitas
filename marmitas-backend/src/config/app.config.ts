@@ -62,6 +62,18 @@ export const config = {
       keyRotationDays: parseInt(process.env.KEY_ROTATION_DAYS || '90', 10), // Default: 90 days
       automaticRotation: process.env.AUTOMATIC_KEY_ROTATION === 'true' || true
     }
+  },
+  // WebSocket server configuration
+  websocket: {
+    path: process.env.WS_PATH || '/ws',
+    maxConnections: parseInt(process.env.WS_MAX_CONNECTIONS || '1000', 10),
+    maxPayload: process.env.WS_MAX_PAYLOAD || '100kb',
+    heartbeatInterval: parseInt(process.env.WS_HEARTBEAT_INTERVAL || '30000', 10), // 30 seconds
+    staleConnectionTimeout: parseInt(process.env.WS_STALE_TIMEOUT || '120000', 10), // 2 minutes
+    monitoringInterval: parseInt(process.env.WS_MONITORING_INTERVAL || '60000', 10), // 1 minute
+    // Security options
+    requireAuthentication: process.env.WS_REQUIRE_AUTH === 'true' || false,
+    allowAnonymousSubscriptions: process.env.WS_ALLOW_ANON_SUBS === 'true' || true
   }
 };
 
