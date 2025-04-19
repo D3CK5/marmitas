@@ -3,7 +3,7 @@ import { config } from './app.config.js';
 import { logger } from '../utils/logger.utils.js';
 import { apiSecurityGateway } from '../middleware/security.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { 
+import {
   createRateLimiter,
   strictRateLimiter,
   veryStrictRateLimiter
@@ -81,9 +81,7 @@ export class ApiGateway {
         this.router.use(routePath, strictRateLimiter);
       } else {
         // Otherwise create custom limiter
-        this.router.use(routePath, createRateLimiter({
-          max: options.rateLimitMax
-        }));
+        this.router.use(routePath, createRateLimiter);
       }
     }
 

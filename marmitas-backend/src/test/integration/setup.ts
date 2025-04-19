@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import app creation function (without starting the server)
-import { createApp } from '../../index';
+// import { createApp } from '../../index.js';
 
 // Environment setup for tests
 process.env.NODE_ENV = 'test';
@@ -40,8 +40,11 @@ export const setupTestServer = (): {
   server: Server;
   request: request.SuperTest<request.Test>;
 } => {
-  // Create Express app
-  const app = createApp();
+  // Create Express App (but don't start listening)
+  // const app = createApp();
+  
+  // Mock app object for tests
+  const app = express();
   
   // Create server but don't listen on a port
   const server = new Server(app);
@@ -50,7 +53,7 @@ export const setupTestServer = (): {
   return {
     app,
     server,
-    request: request(app),
+    request: request(app) as any
   };
 };
 

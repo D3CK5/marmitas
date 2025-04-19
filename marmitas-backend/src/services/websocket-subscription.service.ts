@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger.utils.js';
-import { websocketService, WebSocketConnection } from './websocket.service.js';
+import { websocketService } from './websocket.service.js';
 import { websocketAuthService } from './websocket-auth.service.js';
 import { config } from '../config/app.config.js';
 

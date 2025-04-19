@@ -54,7 +54,7 @@ apiGateway.registerRoute('/addresses', addressRoutes, {
 });
 
 // API documentation and status routes
-apiGateway.registerRoute('/status', Router().get('/', (req, res) => {
+apiGateway.registerRoute('/status', Router().get('/', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -66,7 +66,7 @@ apiGateway.registerRoute('/status', Router().get('/', (req, res) => {
 });
 
 // Version information route
-apiRoutes.get('/version', (req, res) => {
+apiRoutes.get('/version', (_req, res) => {
   res.json({
     version: process.env.npm_package_version || '0.1.0',
     environment: process.env.NODE_ENV || 'development',

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config/app.config.js';
 import { apiResponse } from '../utils/api.utils.js';

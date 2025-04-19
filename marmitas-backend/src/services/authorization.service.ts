@@ -21,6 +21,14 @@ export interface Permission {
 }
 
 /**
+ * Interface for permission conditions
+ */
+interface ConditionsType {
+  owner?: boolean;
+  [key: string]: any;
+}
+
+/**
  * Role-based authorization service
  * Manages permissions and access control
  */
@@ -135,7 +143,7 @@ export class AuthorizationService {
       }
       
       // Check ownership condition
-      if (directMatch.conditions.owner === true) {
+      if ((directMatch.conditions as ConditionsType).owner === true) {
         // If no userId (anonymous) or no resourceOwnerId, ownership can't be verified
         if (!userId || !resourceOwnerId) {
           return false;

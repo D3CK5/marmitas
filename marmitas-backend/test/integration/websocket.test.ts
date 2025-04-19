@@ -5,21 +5,54 @@ import { v4 as uuidv4 } from 'uuid';
 describe('WebSocket Server', () => {
   const baseUrl = `ws://localhost:${config.app.port}${config.websocket?.path || '/ws'}`;
   let ws: WebSocket;
+  let connectTimeout: NodeJS.Timeout;
+  const maxRetries = 3;
   
   beforeEach((done) => {
-    // Create a new WebSocket connection for each test
-    ws = new WebSocket(baseUrl);
+    let retries = 0;
     
-    // Wait for the connection to be established
-    ws.on('open', () => {
-      done();
-    });
+    const connectWithRetry = () => {
+      // Clear any existing timeout
+      if (connectTimeout) {
+        clearTimeout(connectTimeout);
+      }
+      
+      // Create a new WebSocket connection for each test
+      ws = new WebSocket(baseUrl);
+      
+      // Set connection timeout
+      connectTimeout = setTimeout(() => {
+        if (retries < maxRetries) {
+          retries++;
+          console.log(`Connection attempt timed out, retrying (${retries}/${maxRetries})...`);
+          ws.close();
+          connectWithRetry();
+        } else {
+          done(new Error(`Failed to connect to WebSocket server after ${maxRetries} attempts`));
+        }
+      }, 3000);
+      
+      // Wait for the connection to be established
+      ws.on('open', () => {
+        clearTimeout(connectTimeout);
+        done();
+      });
+      
+      // Handle connection errors
+      ws.on('error', (error) => {
+        clearTimeout(connectTimeout);
+        if (retries < maxRetries) {
+          retries++;
+          console.log(`WebSocket connection error: ${error.message}, retrying (${retries}/${maxRetries})...`);
+          connectWithRetry();
+        } else {
+          console.error('WebSocket connection error:', error);
+          done(error);
+        }
+      });
+    };
     
-    // Handle connection errors
-    ws.on('error', (error) => {
-      console.error('WebSocket connection error:', error);
-      done(error);
-    });
+    connectWithRetry();
   });
   
   afterEach((done) => {
@@ -33,11 +66,19 @@ describe('WebSocket Server', () => {
   /**
    * Helper function to send a message and get a response
    */
-  const sendAndReceive = (message: any): Promise<any> => {
+  const sendAndReceive = (message: any, timeoutMs = 5000): Promise<any> => {
     return new Promise((resolve, reject) => {
+      // Check connection state
+      if (ws.readyState !== WebSocket.OPEN) {
+        return reject(new Error(`WebSocket connection not open, current state: ${ws.readyState}`));
+      }
+      
       // Generate a unique message ID for this request
       const messageId = uuidv4();
       const messageWithId = { ...message, messageId };
+      
+      // Track whether we've received a response
+      let responseReceived = false;
       
       // Set up a one-time message handler for the response
       const messageHandler = (data: WebSocket.Data) => {
@@ -46,11 +87,17 @@ describe('WebSocket Server', () => {
           
           // If the response has the same message ID, resolve the promise
           if (response.messageId === messageId) {
+            responseReceived = true;
             ws.removeEventListener('message', messageHandler);
             resolve(response);
           }
         } catch (error) {
-          reject(error);
+          // Only reject if this is for our message
+          if ((error as Error).message.includes(messageId)) {
+            responseReceived = true;
+            ws.removeEventListener('message', messageHandler);
+            reject(error);
+          }
         }
       };
       
@@ -58,13 +105,29 @@ describe('WebSocket Server', () => {
       ws.addEventListener('message', messageHandler);
       
       // Send the message
-      ws.send(JSON.stringify(messageWithId));
+      try {
+        ws.send(JSON.stringify(messageWithId));
+      } catch (error) {
+        ws.removeEventListener('message', messageHandler);
+        return reject(new Error(`Failed to send WebSocket message: ${(error as Error).message}`));
+      }
       
       // Set a timeout to reject the promise if no response is received
-      setTimeout(() => {
-        ws.removeEventListener('message', messageHandler);
-        reject(new Error('WebSocket response timeout'));
-      }, 5000);
+      const timeout = setTimeout(() => {
+        if (!responseReceived) {
+          ws.removeEventListener('message', messageHandler);
+          reject(new Error(`WebSocket response timeout after ${timeoutMs}ms for message type: ${message.type}`));
+        }
+      }, timeoutMs);
+      
+      // Clear timeout if connection closes
+      ws.addEventListener('close', () => {
+        clearTimeout(timeout);
+        if (!responseReceived) {
+          ws.removeEventListener('message', messageHandler);
+          reject(new Error('WebSocket connection closed before receiving response'));
+        }
+      }, { once: true });
     });
   };
   

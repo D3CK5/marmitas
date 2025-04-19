@@ -29,7 +29,7 @@ const httpPort = config.app.port;
 const httpsPort = config.app.httpsPort;
 
 // Add request ID to each request
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   const requestId = uuidv4();
   res.setHeader('X-Request-ID', requestId);
   next();
@@ -81,10 +81,13 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 // Enhanced request logging
-app.use(morgan('combined', {
-  stream: logStream,
-  skip: (req) => req.url === '/health' // Skip health check logs
-}));
+app.use(morgan(
+  'combined', 
+  {
+    stream: logStream,
+    skip: (req: { url: string }) => req.url === '/health' // Skip health check logs
+  } as any // Uso temporário de 'any' para resolver o problema de tipo
+));
 
 // Force HTTPS in production
 if (config.app.forceHttps) {
@@ -121,7 +124,7 @@ apiGateway.registerRoute('/', apiRoutes, {
 app.use(config.app.apiPrefix, apiRouter);
 
 // WebSocket metrics endpoint
-app.get(`${config.app.apiPrefix}/websocket-metrics`, (req, res) => {
+app.get(`${config.app.apiPrefix}/websocket-metrics`, (_req, res) => {
   const metrics = {
     connections: websocketConnectionService.getMetrics(),
     subscriptions: websocketSubscriptionService.getMetrics(),
@@ -168,25 +171,39 @@ const httpServer = app.listen(httpPort, () => {
 
 // Start HTTPS server if enabled
 if (config.app.httpsEnabled) {
-  const httpsServer = httpsConfig.createServer(app);
-  
-  if (httpsServer) {
-    httpsServer.listen(httpsPort, () => {
-      logger.info(`HTTPS server running on port ${httpsPort}`, {
-        environment: config.app.nodeEnv,
-        port: httpsPort,
-        tlsVersion: '1.3'
+  try {
+    const httpsServer = httpsConfig.createServer(app);
+    
+    if (httpsServer) {
+      httpsServer.listen(httpsPort, () => {
+        logger.info(`HTTPS server running on port ${httpsPort}`, {
+          environment: config.app.nodeEnv,
+          port: httpsPort,
+          tlsVersion: '1.3'
+        });
+        
+        // Initialize WebSocket server with the HTTPS server too
+        websocketService.initialize(httpsServer);
+        
+        logger.info('WebSocket server also attached to HTTPS server', {
+          path: config.websocket?.path || '/ws'
+        });
       });
       
-      // Initialize WebSocket server with the HTTPS server too
-      websocketService.initialize(httpsServer);
-      
-      logger.info('WebSocket server also attached to HTTPS server', {
-        path: config.websocket?.path || '/ws'
+      // Handle HTTPS server errors
+      httpsServer.on('error', (error: Error) => {
+        logger.error('HTTPS server error', { 
+          error: error.message,
+          code: (error as any).code
+        });
       });
+    } else {
+      logger.error('HTTPS server could not be started. Check certificate configuration.');
+    }
+  } catch (error) {
+    logger.error('Failed to initialize HTTPS server', { 
+      error: error instanceof Error ? error.message : String(error) 
     });
-  } else {
-    logger.error('HTTPS server could not be started. Check certificate configuration.');
   }
 }
 
@@ -194,21 +211,34 @@ if (config.app.httpsEnabled) {
 const gracefulShutdown = (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
   
-  // Shutdown WebSocket services
-  websocketConnectionService.shutdown();
-  websocketService.shutdown();
+  // Flag to track if shutdown completed successfully
+  let shutdownCompleted = false;
   
-  // Close HTTP server
-  httpServer.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-  
-  // Force close after timeout
-  setTimeout(() => {
-    logger.error('Forced shutdown after timeout');
+  try {
+    // Shutdown WebSocket services
+    websocketConnectionService.shutdown();
+    websocketService.shutdown();
+    
+    // Close HTTP server
+    httpServer.close(() => {
+      logger.info('HTTP server closed');
+      shutdownCompleted = true;
+      process.exit(0);
+    });
+    
+    // Force close after timeout
+    setTimeout(() => {
+      if (!shutdownCompleted) {
+        logger.error('Forced shutdown after timeout');
+        process.exit(1);
+      }
+    }, 30000);
+  } catch (error) {
+    logger.error('Error during shutdown process', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     process.exit(1);
-  }, 30000);
+  }
 };
 
 // Listen for termination signals

@@ -1,8 +1,6 @@
 import { centralizedLogger } from '../utils/centralized-logging.utils.js';
 import { logger } from '../utils/logger.utils.js';
 import { config } from '../config/app.config.js';
-import fs from 'fs';
-import path from 'path';
 import * as nodemailer from 'nodemailer';
 
 /**

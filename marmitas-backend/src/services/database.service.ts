@@ -1,4 +1,13 @@
 import { supabase } from '../config/supabase.js';
+import { logger } from '../utils/logger.utils.js';
+
+// Interface para métricas de BD
+interface DbMetrics {
+  totalQueries: number;
+  errors: number;
+  lastError?: string;
+  lastErrorTime?: Date;
+}
 
 /**
  * DatabaseService - A service for handling database operations
@@ -7,6 +16,12 @@ import { supabase } from '../config/supabase.js';
  * all database operations are performed through the backend API.
  */
 export class DatabaseService {
+  // Métricas para monitoramento
+  private metrics: DbMetrics = {
+    totalQueries: 0,
+    errors: 0
+  };
+  
   /**
    * Execute a query on the specified table
    * @param table The table to query
@@ -17,17 +32,33 @@ export class DatabaseService {
     table: string,
     queryFn: (query: any) => any
   ): Promise<T[]> {
+    // Incrementar contador de queries
+    this.metrics.totalQueries++;
+    
+    const startTime = Date.now();
+    
     try {
       const query = supabase.from(table);
       const { data, error } = await queryFn(query);
       
       if (error) {
+        this.recordError(`Database query error in table ${table}: ${error.message}`, error);
         throw new Error(`Database query error: ${error.message}`);
+      }
+      
+      // Log query performance em queries lentas
+      const queryTime = Date.now() - startTime;
+      if (queryTime > 500) { // Queries mais de 500ms são consideradas lentas
+        logger.warn(`Slow database query detected`, {
+          table,
+          duration: queryTime,
+          timestamp: new Date().toISOString()
+        });
       }
       
       return data || [];
     } catch (error: any) {
-      console.error(`Database error in ${table}:`, error);
+      this.recordError(`Database error in ${table}`, error);
       throw new Error(`Database operation failed: ${error.message}`);
     }
   }
@@ -134,16 +165,47 @@ export class DatabaseService {
    * @returns Whether the deletion was successful
    */
   async delete(table: string, id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .eq('id', id);
+    this.metrics.totalQueries++;
     
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        this.recordError(`Failed to delete record from ${table}`, error);
+        throw new Error(`Failed to delete record: ${error.message}`);
+      }
+      
+      return true;
+    } catch (error: any) {
+      this.recordError(`Delete operation failed on ${table}`, error);
       throw new Error(`Failed to delete record: ${error.message}`);
     }
+  }
+  
+  /**
+   * Registra um erro de banco de dados e atualiza métricas
+   */
+  private recordError(message: string, error: any): void {
+    this.metrics.errors++;
+    this.metrics.lastError = error?.message || String(error);
+    this.metrics.lastErrorTime = new Date();
     
-    return true;
+    logger.error(message, {
+      error: error?.message || String(error),
+      code: error?.code,
+      details: error?.details,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  /**
+   * Retorna métricas de uso e erro do banco de dados
+   */
+  getMetrics(): DbMetrics {
+    return { ...this.metrics };
   }
 }
 

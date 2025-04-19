@@ -62,7 +62,7 @@ export class JwtService {
    * @param payload Token payload
    * @returns Access token
    */
-  generateAccessToken(payload: TokenPayload): string {
+  private generateAccessToken(payload: TokenPayload): string {
     // Add a token ID (jti) to prevent token reuse
     const tokenId = crypto.randomBytes(8).toString('hex');
     
@@ -72,7 +72,7 @@ export class JwtService {
       {
         expiresIn: this.accessTokenExpiry,
         algorithm: 'HS256' // Explicitly specify algorithm
-      }
+      } as jwt.SignOptions
     );
   }
   
@@ -96,7 +96,7 @@ export class JwtService {
       {
         expiresIn: this.refreshTokenExpiry,
         algorithm: 'HS256' // Explicitly specify algorithm
-      }
+      } as jwt.SignOptions
     );
     
     // Store refresh token with expiration

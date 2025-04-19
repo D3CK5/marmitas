@@ -1,25 +1,26 @@
 import express from 'express';
-import { apiSpec } from '../docs/api-spec.js';
+import { apiGateway } from '../config/api-gateway.config.js';
 
 const router = express.Router();
 
 // GET /api/docs - API documentation
-router.get('/', (req, res) => {
-  res.json(apiSpec);
+router.get('/', (_req, res) => {
+  res.json({
+    message: 'API Documentation',
+    status: 'Under construction'
+  });
 });
 
-// GET /api/docs/endpoints - List all endpoints
-router.get('/endpoints', (req, res) => {
-  const endpoints = apiSpec.endpoints.map(endpoint => {
-    return {
-      path: endpoint.path,
-      methods: Object.keys(endpoint.methods)
-    };
-  });
+// GET /api/docs/endpoints - List of endpoints
+router.get('/endpoints', (_req, res) => {
+  const routes = apiGateway.getRoutesInfo();
   
   res.json({
-    basePath: apiSpec.basePath,
-    endpoints
+    endpoints: routes.map(route => ({
+      path: route.path,
+      authRequired: route.authRequired,
+      isHighlySensitive: route.isHighlySensitive || false
+    }))
   });
 });
 

@@ -43,6 +43,7 @@ class SupabaseRealtimeService {
       const supabaseKey = config.supabase?.serviceKey;
       
       if (!supabaseUrl || !supabaseKey) {
+        logger.error('Configuração incompleta: URL ou chave de serviço do Supabase não definida');
         throw new Error('Missing Supabase URL or service key in configuration');
       }
       
@@ -58,6 +59,14 @@ class SupabaseRealtimeService {
         }
       });
       
+      // Verificar se a conexão realtime está funcionando
+      if (!this.supabase) {
+        throw new Error('Failed to create Supabase client');
+      }
+      
+      // Inicializar processo de verificação periódica de conexão
+      this.startConnectionHealthCheck();
+      
       this.isInitialized = true;
       
       logger.info('Supabase Realtime Service initialized');
@@ -65,6 +74,10 @@ class SupabaseRealtimeService {
       logger.error('Failed to initialize Supabase Realtime Service', {
         error: error instanceof Error ? error.message : String(error)
       });
+      
+      // Tentar inicializar novamente após um tempo
+      setTimeout(() => this.initialize(), 5000);
+      
       throw error;
     }
   }
@@ -329,6 +342,58 @@ class SupabaseRealtimeService {
     } finally {
       this.isInitialized = false;
     }
+  }
+  
+  /**
+   * Inicia verificação periódica da saúde da conexão com o Supabase
+   */
+  private startConnectionHealthCheck(): void {
+    const healthCheckInterval = setInterval(() => {
+      if (!this.isInitialized || !this.supabase) {
+        clearInterval(healthCheckInterval);
+        return;
+      }
+      
+      // Verificar cada inscrição
+      for (const [subscriptionId, subscription] of this.subscriptions.entries()) {
+        const channel = subscription.channel;
+        
+        if (String(channel.state) !== 'SUBSCRIBED') {
+          logger.warn('Subscription channel not in SUBSCRIBED state', { 
+            subscriptionId,
+            state: channel.state 
+          });
+          
+          // Tentar reinscrever
+          this.reconnectSubscription(subscriptionId, subscription);
+        }
+      }
+    }, 30000); // Verificar a cada 30 segundos
+  }
+  
+  /**
+   * Tenta reconectar uma inscrição específica
+   */
+  private reconnectSubscription(subscriptionId: string, subscription: SubscriptionInfo): void {
+    logger.info('Attempting to reconnect subscription', { subscriptionId });
+    
+    // Remover e recriar a inscrição
+    this.removeSubscription(subscriptionId);
+    
+    // Recriar após pequeno atraso
+    setTimeout(() => {
+      this.subscribe(
+        subscription.table,
+        subscription.schema,
+        subscription.eventTypes,
+        subscription.filter
+      ).catch(error => {
+        logger.error('Failed to reconnect subscription', {
+          subscriptionId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
+    }, 1000);
   }
 }
 

@@ -9,7 +9,7 @@ import { centralizedLogger } from '../utils/centralized-logging.utils.js';
  * Analyzes incoming HTTP requests for security threats
  * and passes them to the security monitoring service
  */
-export const requestSecurityMonitoring = (req: Request, res: Response, next: NextFunction) => {
+export const requestSecurityMonitoring = (req: Request, _res: Response, next: NextFunction) => {
   try {
     // Extract relevant information for security analysis
     const requestData = {

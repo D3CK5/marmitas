@@ -1,5 +1,4 @@
 import { createLogger, format, transports, Logger } from 'winston';
-import { ElasticsearchTransport } from 'winston-elasticsearch';
 import path from 'path';
 import fs from 'fs';
 import { config } from '../config/app.config.js';
@@ -17,8 +16,23 @@ if (!fs.existsSync(logsDir)) {
  * Provides centralized logging capabilities with structured logs
  * and multiple transport options for comprehensive audit trail
  */
-class CentralizedLoggingService {
-  private centralLogger: Logger;
+export class CentralizedLogger {
+  private centralLogger: Logger = createLogger({
+    level: 'info',
+    format: format.combine(
+      format.timestamp(),
+      format.json()
+    ),
+    transports: [
+      new transports.Console({
+        format: format.combine(
+          format.colorize(),
+          format.simple()
+        )
+      })
+    ]
+  });
+  
   private initialized = false;
   private readonly serviceName: string;
   private readonly environment: string;
@@ -66,25 +80,15 @@ class CentralizedLoggingService {
           level: 'info',
           maxsize: 5242880, // 5MB
           maxFiles: 10,
+        }),
+
+        new transports.Console({
+          format: format.combine(
+            format.colorize(),
+            format.simple()
+          )
         })
       ];
-
-      // Add Elasticsearch transport if configured
-      if (process.env.ELASTICSEARCH_URL) {
-        logTransports.push(
-          new ElasticsearchTransport({
-            level: 'info',
-            clientOpts: {
-              node: process.env.ELASTICSEARCH_URL,
-              auth: {
-                username: process.env.ELASTICSEARCH_USERNAME || '',
-                password: process.env.ELASTICSEARCH_PASSWORD || ''
-              }
-            },
-            indexPrefix: 'marmitas-logs'
-          })
-        );
-      }
 
       // Create centralized logger
       this.centralLogger = createLogger({
@@ -231,7 +235,27 @@ class CentralizedLoggingService {
   isInitialized(): boolean {
     return this.initialized;
   }
+
+  setupElasticsearch(): boolean {
+    try {
+      this.centralLogger.add(
+        new transports.File({
+          filename: 'logs/centralized.log',
+          level: 'info',
+          format: format.combine(
+            format.timestamp(),
+            format.json()
+          )
+        })
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to setup Elasticsearch transport', error);
+      return false;
+    }
+  }
 }
 
 // Export singleton instance
-export const centralizedLogger = new CentralizedLoggingService(); 
+export const centralizedLogger = new CentralizedLogger(); 

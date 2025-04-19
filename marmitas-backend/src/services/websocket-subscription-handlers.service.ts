@@ -1,9 +1,4 @@
 import { logger } from '../utils/logger.utils.js';
-import { websocketService } from './websocket.service.js';
-import { websocketAuthService } from './websocket-auth.service.js';
-import { websocketSubscriptionService } from './websocket-subscription.service.js';
-import { websocketSubscriptionStorageService } from './websocket-subscription-storage.service.js';
-import { config } from '../config/app.config.js';
 import { TransformedEvent } from './supabase-event-transformer.service.js';
 
 /**

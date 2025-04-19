@@ -4,6 +4,32 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
+ * Supabase configuration
+ */
+export interface SupabaseConfig {
+  url?: string;
+  serviceKey?: string;
+}
+
+// Verificação de variáveis críticas em ambiente de produção
+if (process.env.NODE_ENV === 'production') {
+  const criticalEnvVars = [
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'SUPABASE_SERVICE_KEY',
+    'SUPABASE_URL'
+  ];
+  
+  const missingVars = criticalEnvVars.filter(varName => !process.env[varName] || process.env[varName].includes('your_') || process.env[varName] === '${' + varName + '}');
+  
+  if (missingVars.length > 0) {
+    const errorMsg = `Configuração de produção incompleta. Variáveis não definidas corretamente: ${missingVars.join(', ')}`;
+    console.error('\x1b[31m%s\x1b[0m', errorMsg);
+    throw new Error(errorMsg);
+  }
+}
+
+/**
  * Application configuration
  */
 export const config = {
@@ -74,7 +100,12 @@ export const config = {
     // Security options
     requireAuthentication: process.env.WS_REQUIRE_AUTH === 'true' || false,
     allowAnonymousSubscriptions: process.env.WS_ALLOW_ANON_SUBS === 'true' || true
-  }
+  },
+  // Supabase configuration
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    serviceKey: process.env.SUPABASE_SERVICE_KEY
+  } as SupabaseConfig
 };
 
 export default config; 

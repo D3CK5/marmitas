@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { websocketSubscriptionStorageService, StoredSubscription } from './websocket-subscription-storage.service';
+import { websocketSubscriptionStorageService, StoredSubscription } from './websocket-subscription-storage.service.js';
 
 describe('WebSocketSubscriptionStorageService', () => {
   beforeEach(() => {

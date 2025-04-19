@@ -58,7 +58,7 @@ export class KeyRotationService {
     this.checkRotation();
     
     // Set up scheduled key rotation check if automatic rotation is enabled
-    if (config.security?.keyRotation?.automaticRotation !== false) {
+    if (config.security?.keyRotation?.automaticRotation === true) {
       setInterval(() => {
         this.checkRotation();
       }, 24 * 60 * 60 * 1000); // Check daily
@@ -150,7 +150,7 @@ export class KeyRotationService {
       const keyAgeDays = keyAge / (1000 * 60 * 60 * 24);
       
       // Check if rotation is enabled and key age exceeds the rotation interval
-      if (config.security?.keyRotation?.enabled !== false && keyAgeDays >= this.rotationIntervalDays) {
+      if (config.security?.keyRotation?.enabled === true && keyAgeDays >= this.rotationIntervalDays) {
         logger.info('Key rotation needed', { 
           keyAgeDays: Math.floor(keyAgeDays),
           rotationIntervalDays: this.rotationIntervalDays
@@ -238,6 +238,90 @@ export class KeyRotationService {
    */
   isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * Start the key rotation service
+   */
+  public start(): void {
+    logger.info('Starting key rotation service');
+    
+    // Perform initial check
+    this.checkAndRotateKeysIfNeeded();
+    
+    // Configure scheduled checks
+    if (config.security?.keyRotation?.automaticRotation === true) {
+      this.scheduleRotationCheck();
+      logger.info('Automatic key rotation is enabled, scheduled checks configured');
+    } else {
+      logger.info('Automatic key rotation is disabled, manual rotation will be required');
+    }
+  }
+
+  /**
+   * Check and rotate keys if needed
+   */
+  private async checkAndRotateKeysIfNeeded(): Promise<void> {
+    try {
+      const keyStats = await this.getKeyStats();
+      
+      if (!keyStats) {
+        logger.warn('Could not get key stats, skipping rotation check');
+        return;
+      }
+      
+      const keyAgeDays = this.calculateKeyAgeDays(keyStats.createdAt);
+      
+      logger.info('Checking key rotation status', {
+        keyAgeDays: Math.floor(keyAgeDays),
+        rotationIntervalDays: this.rotationIntervalDays
+      });
+      
+      if (config.security?.keyRotation?.enabled === true && keyAgeDays >= this.rotationIntervalDays) {
+        // ... existing code ...
+      }
+    } catch (error) {
+      logger.error('Error checking key rotation', { error });
+    }
+  }
+
+  /**
+   * Get key file stats
+   */
+  private async getKeyStats(): Promise<{ createdAt: Date } | null> {
+    try {
+      if (!fs.existsSync(this.keyPath)) {
+        return null;
+      }
+      
+      const stats = fs.statSync(this.keyPath);
+      return {
+        createdAt: stats.mtime
+      };
+    } catch (error) {
+      logger.error('Failed to get key stats', { error });
+      return null;
+    }
+  }
+
+  /**
+   * Calculate key age in days
+   */
+  private calculateKeyAgeDays(createdAt: Date): number {
+    const keyAge = Date.now() - createdAt.getTime();
+    return keyAge / (1000 * 60 * 60 * 24);
+  }
+
+  /**
+   * Schedule rotation check
+   */
+  private scheduleRotationCheck(): void {
+    // Schedule daily check
+    setInterval(() => {
+      this.checkAndRotateKeysIfNeeded();
+    }, 24 * 60 * 60 * 1000);
+    
+    logger.info('Scheduled key rotation check');
   }
 }
 

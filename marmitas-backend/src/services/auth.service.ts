@@ -24,17 +24,36 @@ export class AuthService {
    */
   async register(userData: any): Promise<any> {
     try {
-      // Validate input data
+      // Validação robusta dos dados de entrada
+      if (!userData) {
+        throw new Error('User data is required');
+      }
+      
       if (!userData.email || !userData.password) {
         throw new Error('Email and password are required');
       }
       
+      if (userData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+      
+      // Email regex validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userData.email)) {
+        throw new Error('Invalid email format');
+      }
+      
       // Check if user already exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
         .eq('email', userData.email)
         .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        logger.error('Error checking existing user', { error: checkError });
+        throw new Error('Error checking user existence');
+      }
       
       if (existingUser) {
         throw new Error('User with this email already exists');
@@ -49,8 +68,14 @@ export class AuthService {
         password: hashedPassword
       });
       
-      if (authError || !authUser.user) {
+      if (authError) {
+        logger.error('Error creating user in auth system', { error: authError });
         throw new Error(authError?.message || 'Failed to create user');
+      }
+      
+      if (!authUser || !authUser.user) {
+        logger.error('No user returned from auth signup');
+        throw new Error('Failed to create user account');
       }
       
       // Prepare profile data with encryption for sensitive fields
@@ -322,22 +347,13 @@ export class AuthService {
   }
   
   /**
-   * Hash a password using bcrypt
-   * @param password Plain text password
+   * Hash a password with bcrypt
+   * @param password Password to hash
    * @returns Hashed password
    */
   private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, config.security.bcryptSaltRounds);
-  }
-  
-  /**
-   * Verify a password against a hash
-   * @param password Plain text password
-   * @param hash Hashed password
-   * @returns True if password matches
-   */
-  private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
+    const salt = await bcrypt.genSalt(config.security.bcryptSaltRounds);
+    return bcrypt.hash(password, salt);
   }
 }
 

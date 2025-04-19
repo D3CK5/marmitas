@@ -105,7 +105,7 @@ class WebSocketService {
    * @param socket The WebSocket instance
    */
   private setupMessageHandling(connectionId: string, socket: WebSocket): void {
-    socket.on('message', (data: WebSocket.Data) => {
+    socket.on('message', (data: any) => {
       try {
         // Update last activity timestamp
         const connection = this.connections.get(connectionId);
@@ -284,12 +284,9 @@ class WebSocketService {
   }
   
   /**
-   * Handle authentication messages
-   * This will be overridden by the websocket-auth.service
-   * @param connectionId The connection's unique ID
-   * @param message The authentication message
+   * Handle authentication request
    */
-  handleAuthentication(connectionId: string, message: any): void {
+  handleAuthentication(connectionId: string, _message: any): void {
     // This is a placeholder that will be overridden
     this.sendToConnection(connectionId, {
       type: 'auth_response',
@@ -299,12 +296,9 @@ class WebSocketService {
   }
   
   /**
-   * Handle subscription messages
-   * This will be overridden by the websocket-subscription.service
-   * @param connectionId The connection's unique ID
-   * @param message The subscription message
+   * Handle subscription request
    */
-  handleSubscription(connectionId: string, message: any): void {
+  handleSubscription(connectionId: string, _message: any): void {
     // This is a placeholder that will be overridden
     this.sendToConnection(connectionId, {
       type: 'subscription_response',
@@ -314,12 +308,9 @@ class WebSocketService {
   }
   
   /**
-   * Handle unsubscription messages
-   * This will be overridden by the websocket-subscription.service
-   * @param connectionId The connection's unique ID
-   * @param message The unsubscription message
+   * Handle unsubscription request
    */
-  handleUnsubscription(connectionId: string, message: any): void {
+  handleUnsubscription(connectionId: string, _message: any): void {
     // This is a placeholder that will be overridden
     this.sendToConnection(connectionId, {
       type: 'unsubscription_response',

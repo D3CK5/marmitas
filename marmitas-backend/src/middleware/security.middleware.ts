@@ -1,49 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
-import { config } from '../config/app.config.js';
-import { apiResponse } from '../utils/api.utils.js';
 import { logger } from '../utils/logger.utils.js';
 import { defaultRateLimiter } from './rate-limit.middleware.js';
 
 /**
- * Apply security headers middleware
- * Adds various security headers to API responses
+ * Security middleware for adding additional security headers
+ * beyond what Helmet provides
  */
-export const securityHeaders = (req: Request, res: Response, next: NextFunction): void => {
-  // Apply Content-Security-Policy headers
-  const cspDirectives = Object.entries(config.security.contentSecurityPolicy.directives)
-    .map(([key, value]) => {
-      if (Array.isArray(value) && value.length > 0) {
-        return `${key} ${value.join(' ')}`;
-      } else if (Array.isArray(value) && value.length === 0) {
-        return key;
-      }
-      return null;
-    })
-    .filter(Boolean)
-    .join('; ');
-
-  if (cspDirectives) {
-    res.setHeader('Content-Security-Policy', cspDirectives);
-  }
-
-  // Apply HSTS header if HTTPS is enabled or forced
-  if (config.app.httpsEnabled || config.app.forceHttps) {
-    const hstsValue = [
-      `max-age=${config.security.hstsMaxAge}`,
-      config.security.hstsIncludeSubDomains ? 'includeSubDomains' : '',
-      config.security.hstsPreload ? 'preload' : ''
-    ].filter(Boolean).join('; ');
-    
-    res.setHeader('Strict-Transport-Security', hstsValue);
-  }
-
-  // Other security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+export const securityHeaders = (_req: Request, res: Response, next: NextFunction): void => {
+  // Set additional security headers
+  
+  // Permissions Policy (formerly Feature Policy)
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=self, camera=self, microphone=self'
+  );
+  
+  // Referrer Policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
-
+  
+  // Cache control for sensitive routes
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  
+  // Set CSRF token cookie if using CSRF protection
+  // (this is usually set during session creation)
+  
   next();
 };
 
@@ -96,10 +76,10 @@ export const securityAuditLogger = (req: Request, res: Response, next: NextFunct
 };
 
 /**
- * API request sanitization middleware
- * Sanitizes request parameters to prevent injection attacks
+ * Request sanitizer middleware
+ * Sanitizes request parameters, query strings, and body to prevent injection attacks
  */
-export const requestSanitizer = (req: Request, res: Response, next: NextFunction): void => {
+export const requestSanitizer = (req: Request, _res: Response, next: NextFunction): void => {
   // Function to sanitize a string value
   const sanitizeValue = (value: any): any => {
     if (typeof value === 'string') {
