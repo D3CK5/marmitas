@@ -1,0 +1,329 @@
+name: Marmitas CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linting
+        run: npm run lint
+
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linting
+        run: npm run lint
+
+  backend-test:
+    name: Backend Test
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+
+  frontend-test:
+    name: Frontend Test
+    needs: frontend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+
+  db-migration-test:
+    name: Database Migration Test
+    needs: backend-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Test Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+          NODE_ENV: test
+        run: |
+          echo "Setting up test database..."
+          npm run db:setup:test
+      
+      - name: Test Migrations
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+          NODE_ENV: test
+        run: |
+          echo "Testing migrations..."
+          npm run db:migration:test
+
+  backend-build:
+    name: Backend Build
+    needs: [backend-test, db-migration-test]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build for development
+        if: github.ref == 'refs/heads/develop'
+        run: npm run build:dev
+      
+      - name: Build for production
+        if: github.ref == 'refs/heads/main'
+        run: npm run build:prod
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+          retention-days: 7
+
+  frontend-build:
+    name: Frontend Build
+    needs: frontend-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build for development
+        if: github.ref == 'refs/heads/develop'
+        run: npm run build:dev
+      
+      - name: Build for production
+        if: github.ref == 'refs/heads/main'
+        run: npm run build:prod
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ./marmitas-frontend/dist
+          retention-days: 7
+
+  deploy-dev:
+    name: Deploy to Development
+    if: github.ref == 'refs/heads/develop'
+    needs: [backend-build, frontend-build]
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Download backend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+      
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./marmitas-frontend/dist
+      
+      - name: Run Database Migrations
+        working-directory: ./marmitas-backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_DEV_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_DEV_KEY }}
+          NODE_ENV: development
+        run: |
+          echo "Running database migrations..."
+          npm ci
+          npm run db:migrate
+      
+      - name: Deploy Backend to Development Server
+        working-directory: ./marmitas-backend
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEV_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_USER }}
+        run: |
+          echo "Deploying backend to development server..."
+          # Replace with actual deployment commands for your environment
+          # Example: SSH/SCP commands to copy files and restart service
+          echo "Backend deployment to development completed"
+      
+      - name: Deploy Frontend to Development Server
+        working-directory: ./marmitas-frontend
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEV_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_USER }}
+        run: |
+          echo "Deploying frontend to development server..."
+          # Replace with actual deployment commands for your environment
+          # Example: aws s3 sync ./dist s3://dev-marmitas-bucket/
+          echo "Frontend deployment to development completed"
+
+  deploy-prod:
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/main'
+    needs: [backend-build, frontend-build]
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Download backend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+      
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./marmitas-frontend/dist
+      
+      - name: Run Database Migrations
+        working-directory: ./marmitas-backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_PROD_KEY }}
+          NODE_ENV: production
+        run: |
+          echo "Running database migrations..."
+          npm ci
+          npm run db:migrate
+      
+      - name: Deploy Backend to Production Server
+        working-directory: ./marmitas-backend
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_USER }}
+        run: |
+          echo "Deploying backend to production server..."
+          # Replace with actual deployment commands for your environment
+          # Example: SSH/SCP commands to copy files and restart service
+          echo "Backend deployment to production completed"
+      
+      - name: Deploy Frontend to Production Server
+        working-directory: ./marmitas-frontend
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_USER }}
+        run: |
+          echo "Deploying frontend to production server..."
+          # Replace with actual deployment commands for your environment
+          # Example: aws s3 sync ./dist s3://prod-marmitas-bucket/
+          echo "Frontend deployment to production completed" 

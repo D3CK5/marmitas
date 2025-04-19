@@ -30,13 +30,13 @@ export const apiResponse = {
     message: string, 
     statusCode = 500, 
     code?: string, 
-    details?: unknown
+    details?: Record<string, any>
   ): void {
     const response: ApiErrorResponse = {
       error: {
         message,
-        ...(code && { code }),
-        ...(details && { details })
+        code: code || undefined,
+        details: details || undefined
       },
       status: 'error',
       timestamp: new Date().toISOString()

@@ -1,0 +1,219 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'marmitas-backend/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'marmitas-backend/**'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linting
+        run: npm run lint
+
+  test:
+    name: Test
+    needs: lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+
+  db-migration-test:
+    name: Database Migration Test
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Test Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+          NODE_ENV: test
+        run: |
+          echo "Setting up test database..."
+          npm run db:setup:test
+      
+      - name: Test Migrations
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+          NODE_ENV: test
+        run: |
+          echo "Testing migrations..."
+          npm run db:migration:test
+
+  build:
+    name: Build
+    needs: [test, db-migration-test]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build for development
+        if: github.ref == 'refs/heads/develop'
+        run: npm run build:dev
+      
+      - name: Build for production
+        if: github.ref == 'refs/heads/main'
+        run: npm run build:prod
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+          retention-days: 7
+
+  deploy-dev:
+    name: Deploy to Development
+    if: github.ref == 'refs/heads/develop'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: development
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+      
+      - name: Run Database Migrations
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_DEV_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_DEV_KEY }}
+          NODE_ENV: development
+        run: |
+          echo "Running database migrations..."
+          npm ci
+          npm run db:migrate
+      
+      - name: Deploy to Development Server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEV_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_USER }}
+        run: |
+          echo "Deploying to development server..."
+          # Replace with actual deployment commands for your environment
+          # Example: SSH/SCP commands to copy files and restart service
+          echo "Deployment to development completed"
+
+  deploy-prod:
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: ./marmitas-backend
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./marmitas-backend/dist
+      
+      - name: Run Database Migrations
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_PROD_KEY }}
+          NODE_ENV: production
+        run: |
+          echo "Running database migrations..."
+          npm ci
+          npm run db:migrate
+      
+      - name: Deploy to Production Server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_USER }}
+        run: |
+          echo "Deploying to production server..."
+          # Replace with actual deployment commands for your environment
+          # Example: SSH/SCP commands to copy files and restart service
+          echo "Deployment to production completed" 
