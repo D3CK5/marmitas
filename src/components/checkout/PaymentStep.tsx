@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -20,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
+import { useOrders } from "@/hooks/useOrders";
 
 // Simular configurações do admin
 const MOCK_PAYMENT_CONFIG = {
@@ -48,21 +48,68 @@ const MOCK_TERMS = [
   "Pedido sujeito à disponibilidade dos produtos"
 ];
 
-export function PaymentStep() {
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "card">("pix");
+interface PaymentStepProps {
+  selectedAddressId: string;
+}
+
+export function PaymentStep({ selectedAddressId }: PaymentStepProps) {
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [installments, setInstallments] = useState("1");
-  const { clearCart } = useCart();
+  const [isLoading, setIsLoading] = useState(false);
+  const { items, total, clearCart } = useCart();
+  const { createOrder } = useOrders();
   const navigate = useNavigate();
 
-  const handleFinishOrder = () => {
-    // Aqui implementaremos a finalização do pedido
-    const paymentDetails = paymentMethod === "card" 
-      ? `Cartão de Crédito - ${installments}x`
-      : "PIX";
+  // Simulando taxa de entrega baseada no CEP
+  const deliveryFee = 5.90; // Exemplo fixo, deve vir do backend
+  const finalTotal = total + deliveryFee;
+
+  const handleFinishOrder = async () => {
+    try {
+      setIsLoading(true);
+
+      // Preparar os itens do pedido
+      const orderItems = items.map(item => ({
+        product_id: item.id.toString(),
+        quantity: item.quantity,
+        price: item.price,
+        notes: item.notes
+      }));
+
+      // Criar o pedido
+      const order = await createOrder({
+        address_id: selectedAddressId,
+        payment_method: paymentMethod,
+        payment_details: {
+          installments: paymentMethod === 'credit_card' ? Number(installments) : undefined
+        },
+        items: orderItems,
+        subtotal: total,
+        delivery_fee: deliveryFee,
+        total: finalTotal
+      });
       
-    toast.success("Pedido realizado com sucesso!");
-    clearCart();
-    navigate("/");
+      toast.success("Pedido realizado com sucesso!");
+      clearCart();
+      navigate("/pedido-realizado", { 
+        state: { 
+          order: {
+            ...order,
+            items: orderItems,
+            payment_method: paymentMethod,
+            payment_details: {
+              installments: paymentMethod === 'credit_card' ? Number(installments) : undefined
+            },
+            total: finalTotal
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao finalizar pedido:', error);
+      toast.error("Erro ao finalizar pedido. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,7 +123,7 @@ export function PaymentStep() {
 
       <RadioGroup
         value={paymentMethod}
-        onValueChange={(value) => setPaymentMethod(value as "pix" | "card")}
+        onValueChange={(value) => setPaymentMethod(value as "pix" | "credit_card")}
         className="grid gap-4"
       >
         <div>
@@ -93,9 +140,9 @@ export function PaymentStep() {
         </div>
 
         <div>
-          <RadioGroupItem value="card" id="card" className="peer sr-only" />
+          <RadioGroupItem value="credit_card" id="credit_card" className="peer sr-only" />
           <Label
-            htmlFor="card"
+            htmlFor="credit_card"
             className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
           >
             <span className="font-semibold">Cartão de Crédito</span>
@@ -106,7 +153,7 @@ export function PaymentStep() {
         </div>
       </RadioGroup>
 
-      {paymentMethod === "card" && (
+      {paymentMethod === "credit_card" && (
         <div className="space-y-2">
           <Label>Parcelas</Label>
           <Select value={installments} onValueChange={setInstallments}>
@@ -140,8 +187,12 @@ export function PaymentStep() {
         </CardContent>
       </Card>
 
-      <Button onClick={handleFinishOrder} className="w-full">
-        Finalizar Pedido
+      <Button 
+        onClick={handleFinishOrder} 
+        className="w-full"
+        disabled={isLoading}
+      >
+        {isLoading ? "Processando..." : "Finalizar Pedido"}
       </Button>
     </div>
   );

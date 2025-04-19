@@ -1,25 +1,21 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-interface Address {
-  id: string;
-  street: string;
-  number: string;
-  complement?: string;
-  neighborhood: string;
-  zipCode: string;
-}
+import { useProfile } from "@/hooks/useProfile";
 
 interface AddressStepProps {
-  onComplete: () => void;
+  onComplete: (addressId: string) => void;
   userName?: string;
 }
 
 export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
+  const { getAddresses, addAddress } = useProfile();
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [address, setAddress] = useState({
     receiver: userName,
     cep: "",
@@ -27,26 +23,29 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
     number: "",
     complement: "",
     neighborhood: "",
+    city: "",
+    state: "",
   });
 
-  // Simulando endereços salvos do usuário
-  const savedAddresses: Address[] = [
-    {
-      id: "1",
-      street: "Rua das Flores",
-      number: "123",
-      complement: "Apto 101",
-      neighborhood: "Centro",
-      zipCode: "12345-678",
-    },
-    {
-      id: "2",
-      street: "Av. Principal",
-      number: "456",
-      neighborhood: "Jardim",
-      zipCode: "87654-321",
-    },
-  ];
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  const loadAddresses = async () => {
+    try {
+      const userAddresses = await getAddresses();
+      setAddresses(userAddresses);
+      // Se houver um endereço padrão, seleciona ele
+      const defaultAddress = userAddresses.find(addr => addr.is_default);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+      }
+    } catch (error) {
+      toast.error("Erro ao carregar endereços");
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
 
   const handleCepBlur = async () => {
     if (address.cep.length === 8) {
@@ -59,6 +58,8 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
             ...prev,
             street: data.logradouro,
             neighborhood: data.bairro,
+            city: data.localidade,
+            state: data.uf,
           }));
         }
       } catch (error) {
@@ -67,114 +68,188 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
     }
   };
 
-  const handleSelectAddress = (savedAddress: Address) => {
-    setAddress({
-      receiver: userName,
-      cep: savedAddress.zipCode,
-      street: savedAddress.street,
-      number: savedAddress.number,
-      complement: savedAddress.complement || "",
-      neighborhood: savedAddress.neighborhood,
-    });
+  const handleSelectAddress = (addressId: string) => {
+    setSelectedAddressId(addressId);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete();
+
+    if (!selectedAddressId && !address.street) {
+      toast.error("Selecione um endereço ou preencha um novo");
+      return;
+    }
+
+    if (selectedAddressId) {
+      onComplete(selectedAddressId);
+      return;
+    }
+
+    // Se não selecionou um endereço existente, cadastra o novo
+    try {
+      setIsLoading(true);
+      const newAddress = await addAddress({
+        cep: address.cep,
+        street: address.street,
+        number: address.number,
+        complement: address.complement,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        receiver: address.receiver,
+        is_default: addresses.length === 0 // Se for o primeiro endereço, marca como padrão
+      });
+
+      onComplete(newAddress.id);
+    } catch (error) {
+      toast.error("Erro ao salvar endereço");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoadingAddresses) {
+    return <div>Carregando endereços...</div>;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold mb-4">Endereço de Entrega</h2>
         <p className="text-muted-foreground mb-6">
-          Preencha os dados do endereço de entrega ou selecione um de seus endereços abaixo
+          Selecione um endereço salvo ou cadastre um novo
         </p>
       </div>
 
-      {savedAddresses.length > 0 && (
+      {addresses.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium">Endereços Salvos:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {savedAddresses.map((saved) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {addresses.map((saved) => (
               <Button
                 key={saved.id}
-                variant="outline"
+                variant={selectedAddressId === saved.id ? "default" : "outline"}
                 type="button"
-                className="justify-start"
-                onClick={() => handleSelectAddress(saved)}
+                className="justify-start h-auto py-4"
+                onClick={() => handleSelectAddress(saved.id)}
               >
-                {saved.street}, {saved.number}
+                <div className="text-left">
+                  <p className="font-medium">{saved.receiver}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {saved.street}, {saved.number}
+                    {saved.complement && ` - ${saved.complement}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {saved.neighborhood} - {saved.city}/{saved.state}
+                  </p>
+                  {saved.is_default && (
+                    <p className="text-sm text-primary mt-1">Endereço padrão</p>
+                  )}
+                </div>
               </Button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="receiver">Recebedor</Label>
-          <Input
-            id="receiver"
-            value={address.receiver}
-            onChange={(e) => setAddress({ ...address, receiver: e.target.value })}
-            placeholder="Nome de quem vai receber"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="cep">CEP</Label>
-          <Input
-            id="cep"
-            value={address.cep}
-            onChange={(e) => setAddress({ ...address, cep: e.target.value })}
-            onBlur={handleCepBlur}
-            placeholder="00000-000"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="street">Rua</Label>
-          <Input
-            id="street"
-            value={address.street}
-            onChange={(e) => setAddress({ ...address, street: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+      {!selectedAddressId && (
+        <div className="grid gap-4">
           <div className="space-y-2">
-            <Label htmlFor="number">Número</Label>
+            <Label htmlFor="receiver">Recebedor</Label>
             <Input
-              id="number"
-              value={address.number}
-              onChange={(e) => setAddress({ ...address, number: e.target.value })}
+              id="receiver"
+              value={address.receiver}
+              onChange={(e) => setAddress({ ...address, receiver: e.target.value })}
+              placeholder="Nome de quem vai receber"
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="complement">Complemento</Label>
+            <Label htmlFor="cep">CEP</Label>
             <Input
-              id="complement"
-              value={address.complement}
-              onChange={(e) => setAddress({ ...address, complement: e.target.value })}
-              placeholder="Opcional"
+              id="cep"
+              value={address.cep}
+              onChange={(e) => setAddress({ ...address, cep: e.target.value.replace(/\D/g, '') })}
+              onBlur={handleCepBlur}
+              placeholder="00000000"
+              required
+              maxLength={8}
+            />
+            <p className="text-sm text-muted-foreground">
+              Digite o CEP para preenchimento automático
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="street">Rua</Label>
+            <Input
+              id="street"
+              value={address.street}
+              onChange={(e) => setAddress({ ...address, street: e.target.value })}
+              required
             />
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="neighborhood">Bairro</Label>
-          <Input
-            id="neighborhood"
-            value={address.neighborhood}
-            onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
-          />
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="number">Número</Label>
+              <Input
+                id="number"
+                value={address.number}
+                onChange={(e) => setAddress({ ...address, number: e.target.value })}
+                required
+              />
+            </div>
 
-      <Button type="submit" className="w-full">
-        Continuar
+            <div className="space-y-2">
+              <Label htmlFor="complement">Complemento</Label>
+              <Input
+                id="complement"
+                value={address.complement}
+                onChange={(e) => setAddress({ ...address, complement: e.target.value })}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="neighborhood">Bairro</Label>
+            <Input
+              id="neighborhood"
+              value={address.neighborhood}
+              onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">Cidade</Label>
+              <Input
+                id="city"
+                value={address.city}
+                onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="state">Estado</Label>
+              <Input
+                id="state"
+                value={address.state}
+                onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                required
+                maxLength={2}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Salvando..." : "Continuar"}
       </Button>
     </form>
   );

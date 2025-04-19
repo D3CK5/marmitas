@@ -10,12 +10,15 @@ import { AddressStep } from "@/components/checkout/AddressStep";
 import { PaymentStep } from "@/components/checkout/PaymentStep";
 import { Steps } from "@/components/checkout/Steps";
 import { QuantityCounter } from "@/components/QuantityCounter";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CheckoutStep = "auth" | "address" | "payment";
 
 export default function Checkout() {
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("auth");
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const { items, total, updateQuantity, removeItem } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   if (items.length === 0) {
@@ -121,10 +124,16 @@ export default function Checkout() {
                 <AuthStep onComplete={() => setCurrentStep("address")} />
               )}
               {currentStep === "address" && (
-                <AddressStep onComplete={() => setCurrentStep("payment")} />
+                <AddressStep 
+                  onComplete={(addressId) => {
+                    setSelectedAddressId(addressId);
+                    setCurrentStep("payment");
+                  }}
+                  userName={user?.user_metadata?.full_name}
+                />
               )}
               {currentStep === "payment" && (
-                <PaymentStep />
+                <PaymentStep selectedAddressId={selectedAddressId} />
               )}
             </div>
             

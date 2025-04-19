@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,95 +28,23 @@ import {
 import { Search, Filter } from "lucide-react";
 import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
 import { OrderDetails } from "@/components/admin/OrderDetails";
-
-type OrderStatus = "pending" | "awaiting_payment" | "preparing" | "completed" | "cancelled";
-
-interface Order {
-  id: number;
-  number: string;
-  customerName: string;
-  total: number;
-  status: OrderStatus;
-  createdAt: string;
-  items: Array<{
-    id: number;
-    name: string;
-    quantity: number;
-    price: number;
-  }>;
-  customer: {
-    name: string;
-    phone: string;
-    address: string;
-  };
-}
-
-// Mock data
-const orders: Order[] = [
-  {
-    id: 1,
-    number: "123",
-    customerName: "João Silva",
-    total: 69.80,
-    status: "completed",
-    createdAt: "2024-03-01T10:00:00",
-    items: [
-      { id: 1, name: "Bowl de Salmão", quantity: 1, price: 39.90 },
-      { id: 2, name: "Salada Caesar", quantity: 1, price: 29.90 }
-    ],
-    customer: {
-      name: "João Silva",
-      phone: "11999999999",
-      address: "Rua ABC, 123"
-    }
-  },
-  {
-    id: 2,
-    number: "122",
-    customerName: "João Silva",
-    total: 32.90,
-    status: "completed",
-    createdAt: "2024-02-28T15:30:00",
-    items: [
-      { id: 3, name: "Frango Grelhado", quantity: 1, price: 32.90 }
-    ],
-    customer: {
-      name: "João Silva",
-      phone: "11999999999",
-      address: "Rua ABC, 123"
-    }
-  },
-  {
-    id: 3,
-    number: "121",
-    customerName: "João Silva",
-    total: 45.90,
-    status: "completed",
-    createdAt: "2024-02-25T14:20:00",
-    items: [
-      { id: 4, name: "Poke de Atum", quantity: 1, price: 45.90 }
-    ],
-    customer: {
-      name: "João Silva",
-      phone: "11999999999",
-      address: "Rua ABC, 123"
-    }
-  }
-];
+import { useAdminOrders, type Order } from "@/hooks/useAdminOrders";
+import { formatPrice } from "@/lib/utils";
 
 export default function Orders() {
+  const { orders, isLoading } = useAdminOrders();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders?.filter(order => {
     const matchesStatus = selectedStatus === "all" ? true : order.status === selectedStatus;
     const matchesSearch = searchTerm
-      ? order.number.includes(searchTerm) ||
-        order.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      ? order.id.toString().includes(searchTerm) ||
+        order.user.full_name.toLowerCase().includes(searchTerm.toLowerCase())
       : true;
     return matchesStatus && matchesSearch;
-  });
+  }) || [];
 
   return (
     <AdminLayout>
@@ -178,38 +106,58 @@ export default function Orders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>#{order.number}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>R$ {order.total.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <OrderStatusBadge status={order.status} />
-                  </TableCell>
-                  <TableCell>
-                    {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedOrder(order)}
-                        >
-                          Detalhes
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl">
-                        <DialogHeader>
-                          <DialogTitle>Pedido #{order.number}</DialogTitle>
-                        </DialogHeader>
-                        <OrderDetails order={order} />
-                      </DialogContent>
-                    </Dialog>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Carregando pedidos...
+                    </p>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredOrders.length > 0 ? (
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>#{order.id}</TableCell>
+                    <TableCell>{order.user.full_name}</TableCell>
+                    <TableCell>{formatPrice(order.total)}</TableCell>
+                    <TableCell>
+                      <OrderStatusBadge status={order.status} />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            Detalhes
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle>Pedido #{order.id}</DialogTitle>
+                          </DialogHeader>
+                          <OrderDetails 
+                            order={order}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Nenhum pedido encontrado
+                    </p>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

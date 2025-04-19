@@ -1,55 +1,37 @@
-
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "sonner";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useEffect } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
+import { AlertCircle } from 'lucide-react';
 
 interface AuthStepProps {
   onComplete: () => void;
 }
 
 export function AuthStep({ onComplete }: AuthStepProps) {
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [countdown, setCountdown] = useState(7);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!isLoggedIn && !showLoginDialog) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setShowLoginDialog(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
+    // Se o usuário já estiver logado, pula a etapa de autenticação
+    if (user) {
+      onComplete();
     }
-  }, [isLoggedIn, showLoginDialog]);
+  }, [user, onComplete]);
 
-  const handleLogin = () => {
-    // Aqui implementaremos o login
-    toast.success("Login realizado com sucesso!");
-    setIsLoggedIn(true);
-    setShowLoginDialog(false);
-    onComplete();
-  };
+  // Se o usuário já estiver logado, não renderiza nada
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Identificação</h2>
-        <Alert>
-          <AlertDescription>
-            Precisa estar logado para terminar o pedido, faça login em{" "}
-            <span className="text-primary font-medium">{countdown}</span> segundos
-          </AlertDescription>
-        </Alert>
-      </div>
+      <h2 className="text-2xl font-bold">Autenticação</h2>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Atenção</AlertTitle>
+        <AlertDescription>
+          Você precisa fazer login para continuar com a compra.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

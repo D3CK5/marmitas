@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProfile } from "@/hooks/useProfile";
+import { AccountMenu } from "@/components/account/AccountMenu";
 
 const profileSchema = z.object({
   full_name: z.string().min(3, "Nome muito curto"),
@@ -126,6 +127,8 @@ export function AccountProfile() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      <AccountMenu />
+      
       <div>
         <h1 className="text-2xl font-semibold">Meus Dados</h1>
         <p className="text-muted-foreground">Gerencie suas informações pessoais e senha</p>

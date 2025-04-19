@@ -1,94 +1,26 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
-import { User, Home, ShoppingBag, ClipboardList } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ClipboardList } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
+import { AccountMenu } from "@/components/account/AccountMenu";
 
 export function AccountHome() {
   const { user } = useAuth();
-  const { getOrders, getAddresses } = useProfile();
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [addresses, setAddresses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [ordersData, addressesData] = await Promise.all([
-        getOrders(),
-        getAddresses()
-      ]);
-      setRecentOrders(ordersData);
-      setAddresses(addressesData);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      "Pendente": "bg-yellow-100 text-yellow-800",
-      "Em Preparo": "bg-blue-100 text-blue-800",
-      "Em Entrega": "bg-purple-100 text-purple-800",
-      "Entregue": "bg-green-100 text-green-800",
-      "Cancelado": "bg-red-100 text-red-800"
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
-  };
+  const { orders, isLoading } = useProfile();
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      {/* Cabeçalho com os cards na MESMA LINHA */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Bem-vindo, {user?.full_name || 'Cliente'}!</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus pedidos, endereços e informações pessoais
-          </p>
-        </div>
-        
-        {/* Cards na MESMA LINHA com ícones ao lado do texto */}
-        <div className="flex gap-3">
-          <Link to="/minhaconta/dados">
-            <div className="flex items-center border rounded-md p-3 bg-white hover:bg-gray-50 transition-colors w-36 h-16">
-              <User className="h-6 w-6 text-green-600 mr-2 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium leading-tight">Perfil</p>
-                <p className="text-xs text-muted-foreground">Novo cliente</p>
-              </div>
-            </div>
-          </Link>
-          
-          <Link to="/minhaconta/enderecos">
-            <div className="flex items-center border rounded-md p-3 bg-white hover:bg-gray-50 transition-colors w-36 h-16">
-              <Home className="h-6 w-6 text-green-600 mr-2 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium leading-tight">Endereços</p>
-                <p className="text-xs text-muted-foreground">{addresses.length} endereço(s)</p>
-              </div>
-            </div>
-          </Link>
-          
-          <Link to="/minhaconta/pedidos">
-            <div className="flex items-center border rounded-md p-3 bg-white hover:bg-gray-50 transition-colors w-36 h-16">
-              <ShoppingBag className="h-6 w-6 text-green-600 mr-2 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium leading-tight">Pedidos</p>
-                <p className="text-xs text-muted-foreground">{recentOrders.length} pedido(s)</p>
-              </div>
-            </div>
-          </Link>
-        </div>
+      <AccountMenu />
+
+      <div>
+        <h1 className="text-2xl font-semibold">Bem-vindo, {user?.full_name || 'Cliente'}!</h1>
+        <p className="text-muted-foreground">
+          Gerencie seus pedidos, endereços e informações pessoais
+        </p>
       </div>
 
       {/* Pedidos Recentes */}
@@ -103,8 +35,8 @@ export function AccountHome() {
         <div className="space-y-4">
           {isLoading ? (
             <p>Carregando pedidos recentes...</p>
-          ) : recentOrders.length > 0 ? (
-            recentOrders.slice(0, 3).map((order) => (
+          ) : orders.length > 0 ? (
+            orders.slice(0, 3).map((order) => (
               <Card key={order.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -112,9 +44,7 @@ export function AccountHome() {
                       <div className="flex items-center gap-3 mb-2">
                         <ClipboardList className="w-4 h-4 text-muted-foreground" />
                         <p className="font-medium">Pedido #{order.id}</p>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
+                        <OrderStatusBadge status={order.status} />
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {new Date(order.created_at).toLocaleDateString('pt-BR', {

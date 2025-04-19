@@ -59,10 +59,10 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
               <Button 
                 variant="ghost" 
                 className="w-full justify-start"
-                onClick={() => handleNavigation("/minhaconta/dados")}
+                onClick={() => handleNavigation("/minhaconta")}
               >
                 <User className="mr-2 h-5 w-5" />
-                Meus Dados
+                Minha Conta
               </Button>
               
               <Button 

@@ -1,4 +1,3 @@
-
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MealCard } from "@/components/MealCard";
@@ -15,8 +14,12 @@ const Index = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          category:categories(id, name)
+        `)
         .eq('is_active', true)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
