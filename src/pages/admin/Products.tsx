@@ -197,9 +197,6 @@ export default function Products() {
 
   // Função para fechar o modal e limpar o estado
   const handleCloseDialog = async () => {
-    if (isEditingProduct?.id && isEditingProduct.allows_food_changes) {
-      await clearSessionFoods(isEditingProduct.id);
-    }
     setIsCreateDialogOpen(false);
     setIsEditingProduct(null);
   };

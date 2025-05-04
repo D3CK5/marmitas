@@ -1,16 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { STORAGE_PATHS } from "@/lib/supabase";
 
-export type Product = {
+export interface Product {
   id: number;
   title: string;
   description: string;
   price: number;
-  category: string;
-  is_active: boolean;
   stock: number;
+  is_active: boolean;
+  is_featured: boolean;
+  allows_food_changes: boolean;
+  category_id: number;
   images: string[];
   nutritional_info?: {
     calories: number;
@@ -20,28 +22,26 @@ export type Product = {
     fiber: number;
     sodium: number;
   } | null;
-  changeable_foods: {
-    product_id: number;
-    default_food: {
-      id: number;
-      name: string;
-    };
-    alternative_food: {
-      id: number;
-      name: string;
-    }[];
-  }[];
-  is_featured: boolean;
   created_at: string;
+  updated_at: string;
   deleted_at?: string | null;
-  category_id: number;
   category?: {
     id: number;
     name: string;
   };
-  updated_at: string;
-  allows_food_changes: boolean;
-};
+  changeable_foods?: Array<{
+    id: number;
+    is_default: boolean;
+    default_food: {
+      id: number;
+      name: string;
+    };
+    alternative_food?: {
+      id: number;
+      name: string;
+    };
+  }>;
+}
 
 export function useProducts() {
   const queryClient = useQueryClient();
@@ -51,7 +51,7 @@ export function useProducts() {
     queryFn: async () => {
       try {
         // Buscar produtos
-        const { data: products, error } = await supabase
+        const { data: productsData, error: productsError } = await supabase
           .from("products")
           .select(`
             id,
@@ -63,12 +63,18 @@ export function useProducts() {
             is_featured,
             allows_food_changes,
             created_at,
+            updated_at,
             category_id,
             images,
             nutritional_info,
             product_changeable_foods!left (
               id,
+              is_default,
               default_food:changeable_foods!default_food_id (
+                id,
+                name
+              ),
+              alternative_food:changeable_foods!alternative_food_id (
                 id,
                 name
               )
@@ -77,20 +83,27 @@ export function useProducts() {
           .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (productsError) throw productsError;
 
         // Buscar categorias
-        const { data: categories } = await supabase
+        const { data: categoriesData, error: categoriesError } = await supabase
           .from("categories")
           .select("id, name")
           .is('deleted_at', null);
 
+        if (categoriesError) throw categoriesError;
+
         // Formatar os dados
-        return products?.map(product => ({
+        return (productsData || []).map(product => ({
           ...product,
-          category: categories?.find(c => c.id === product.category_id),
-          changeable_foods: product.product_changeable_foods || []
-        })) || [];
+          category: categoriesData?.find(c => c.id === product.category_id),
+          changeable_foods: product.product_changeable_foods?.map(food => ({
+            id: food.id,
+            is_default: food.is_default,
+            default_food: food.default_food,
+            alternative_food: food.alternative_food
+          })) || []
+        }));
 
       } catch (error) {
         console.error('Erro ao buscar produtos:', error);

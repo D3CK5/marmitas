@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,9 +27,10 @@ interface ProductFormProps {
 export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
   const { createProduct, updateProduct, uploadImage } = useProducts();
   const { categories } = useCategories();
-  const { clearSessionFoods, transferTempFoods } = useChangeableFoods();
+  const { clearSessionFoods } = useChangeableFoods();
   const [isLoading, setIsLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [newProductId, setNewProductId] = useState<number | null>(null);
   const [originalFormData, setOriginalFormData] = useState({
     title: "",
     description: "",
@@ -51,7 +52,6 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
   });
 
   const [formData, setFormData] = useState(originalFormData);
-  const [tempProductId, setTempProductId] = useState<number | null>(null);
 
   // Resetar formulário quando o modal abrir/fechar ou quando initialData mudar
   useEffect(() => {
@@ -85,14 +85,7 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
     }
   }, [initialData]);
 
-  // Gerar um ID temporário para novos produtos quando ativar troca de alimentos
-  useEffect(() => {
-    if (!initialData && formData.allows_food_changes && !tempProductId) {
-      setTempProductId(Math.floor(Math.random() * -1000000)); // ID negativo para garantir que não conflite com IDs reais
-    }
-  }, [formData.allows_food_changes, initialData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
 
     // Se for um campo da tabela nutricional
@@ -138,12 +131,8 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Limpar o ID temporário quando desativar troca de alimentos
   const handleFoodChangesToggle = (value: boolean) => {
     setFormData(prev => ({ ...prev, allows_food_changes: value }));
-    if (!value) {
-      setTempProductId(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,7 +140,8 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
     setIsLoading(true);
 
     try {
-      // Preparar dados básicos do produto (sem changeable_foods)
+
+      // Preparar dados básicos do produto
       const productData = {
         title: formData.title,
         description: formData.description,
@@ -172,24 +162,49 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
         allows_food_changes: formData.allows_food_changes
       };
 
+      let productId: number;
+
       if (initialData) {
+        // Se o produto tinha troca de alimentos e agora não tem mais, limpar os alimentos
+        if (initialData.allows_food_changes && !formData.allows_food_changes) {
+          console.log("Produto não permite mais trocas, limpando alimentos");
+          await clearSessionFoods(initialData.id);
+        }
+
         await updateProduct.mutateAsync({
           id: initialData.id,
           ...productData,
         });
+        productId = initialData.id;
+        
+        // Só fecha o modal e mostra o toast se não estiver configurando trocas
+        if (!formData.allows_food_changes) {
+          toast.success("Produto atualizado com sucesso!");
+          onSubmit();
+        }
       } else {
+        console.log("Criando novo produto");
         const newProduct = await createProduct.mutateAsync(productData);
-        if (tempProductId) {
-          await transferTempFoods(tempProductId, newProduct.id);
+        productId = newProduct.id;
+        
+        // Se o produto permite troca de alimentos, não fecharemos o modal ainda
+        if (formData.allows_food_changes) {
+          console.log("Novo produto permite trocas, mantendo formulário aberto para configuração");
+          setNewProductId(productId);
+          toast.success("Produto criado com sucesso!");
+        } else {
+          // Produto não permite trocas, podemos fechar o modal
+          toast.success("Produto criado com sucesso!");
+          onSubmit();
         }
       }
       
-      setFormData(originalFormData);
-      setImages([]);
-      setTempProductId(null);
-      
-      toast.success(initialData ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!");
-      onSubmit();
+      // Só limpamos o formulário se não estivermos configurando as trocas
+      if (!formData.allows_food_changes) {
+        setFormData(originalFormData);
+        setImages([]);
+        setNewProductId(null);
+      }
     } catch (error: any) {
       console.error("Erro ao salvar produto:", error);
       toast.error(`Erro ao ${initialData ? 'atualizar' : 'criar'} produto: ${error.message || 'Erro desconhecido'}`);
@@ -198,24 +213,27 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
     }
   };
 
-  // Função para lidar com o cancelamento
-  const handleCancel = async () => {
-    // Restaurar o estado original
-    setFormData(originalFormData);
-    
-    if (initialData?.id) {
-      // Se o estado original tinha troca de alimentos ativada e foi desativada durante a edição
-      // ou vice-versa, precisamos limpar os alimentos adicionados na sessão
-      if (originalFormData.allows_food_changes !== formData.allows_food_changes) {
-        await clearSessionFoods(initialData.id);
-      }
+  const handleCancel = () => {
+    // Se for um produto novo que ainda não foi salvo, podemos limpar tudo
+    if (!initialData && newProductId) {
+      clearSessionFoods(newProductId);
     }
     
+    setFormData(originalFormData);
+    setImages([]);
+    setNewProductId(null);
+    onSubmit();
+  };
+
+  const handleFinishConfiguration = () => {
+    setFormData(originalFormData);
+    setImages([]);
+    setNewProductId(null);
     onSubmit();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <div className="space-y-4">
         <div>
           <Label>Imagens</Label>
@@ -254,8 +272,8 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="title" required value={formData.title} onChange={handleChange} />
+            <Label htmlFor="title">Nome</Label>
+            <Input id="title" required value={formData.title} onChange={handleChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
@@ -375,12 +393,11 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
         </div>
       </div>
 
-      {formData.allows_food_changes && (initialData || tempProductId) && (
+      {(formData.allows_food_changes && (initialData?.id || newProductId)) && (
         <div className="space-y-4 border rounded-lg p-4">
           <h3 className="font-medium">Configuração de Troca de Alimentos</h3>
           <FoodSelector 
-            productId={initialData?.id || tempProductId} 
-            isTemp={!initialData}
+            productId={initialData?.id || newProductId!}
           />
         </div>
       )}
@@ -394,7 +411,7 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
           Cancelar
         </Button>
         <Button type="submit" disabled={isLoading}>
-          Salvar
+          {newProductId ? "Atualizar" : "Salvar"}
         </Button>
       </div>
     </form>
