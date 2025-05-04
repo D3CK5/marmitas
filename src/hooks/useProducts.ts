@@ -37,9 +37,9 @@ export interface Product {
       name: string;
     };
     alternative_food?: {
-      id: number;
-      name: string;
-    };
+    id: number;
+    name: string;
+  };
   }>;
 }
 

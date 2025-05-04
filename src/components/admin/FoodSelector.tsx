@@ -113,13 +113,13 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
       toast.error("Selecione um alimento primeiro");
       return;
     }
-    
+
     try {
       await linkFoodToProduct({
         productId,
         defaultFoodId: parseInt(selectedFood)
       });
-
+      
       setSelectedFood("");
       loadProductFoods();
     } catch (error) {
@@ -141,7 +141,7 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
         defaultFoodId,
         alternativeFoodId: parseInt(selectedAlternative)
       });
-
+      
       setSelectedAlternatives(prev => ({
         ...prev,
         [defaultFoodId]: ""
@@ -173,7 +173,7 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
   };
 
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <Select 
@@ -186,8 +186,8 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
             <SelectContent>
               {getAvailableDefaultFoods().length > 0 ? (
                 getAvailableDefaultFoods().map((food) => (
-                  <SelectItem key={food.id} value={food.id.toString()}>
-                    {food.name}
+                <SelectItem key={food.id} value={food.id.toString()}>
+                  {food.name}
                   </SelectItem>
                 ))
               ) : (
@@ -199,9 +199,9 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
           </Select>
         </div>
         <Button onClick={handleAddDefaultFood}>
-          Adicionar
-        </Button>
-      </div>
+            Adicionar
+          </Button>
+        </div>
 
       <div className="space-y-6">
         {productFoods.map((food) => (
@@ -292,11 +292,11 @@ export function FoodSelector({ productId }: FoodSelectorProps) {
                 </div>
                 <Button onClick={() => handleAddAlternativeFood(food.default_food.id)}>
                   Adicionar
-                </Button>
+                        </Button>
+                      </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );

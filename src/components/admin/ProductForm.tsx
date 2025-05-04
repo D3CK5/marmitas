@@ -201,8 +201,8 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
       
       // Só limpamos o formulário se não estivermos configurando as trocas
       if (!formData.allows_food_changes) {
-        setFormData(originalFormData);
-        setImages([]);
+      setFormData(originalFormData);
+      setImages([]);
         setNewProductId(null);
       }
     } catch (error: any) {

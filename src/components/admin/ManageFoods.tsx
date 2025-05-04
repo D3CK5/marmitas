@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useChangeableFoods } from "@/hooks/useChangeableFoods";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash, Pencil } from "lucide-react";
+import { Trash } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function ManageFoods() {
-  const { foods, createFood, deleteFood } = useChangeableFoods();
+  const queryClient = useQueryClient();
+  const { foods = [], createFood, deleteFood, refetchFoods } = useChangeableFoods();
   const [newFoodName, setNewFoodName] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -28,13 +30,24 @@ export function ManageFoods() {
     onConfirm: () => {},
   });
 
+  // Recarregar alimentos quando o componente for montado
+  useEffect(() => {
+    refetchFoods();
+  }, [refetchFoods]);
+
   const handleCreateFood = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFoodName.trim()) return;
 
     try {
-      await createFood.mutateAsync({ name: newFoodName });
+      await createFood.mutateAsync({ 
+        name: newFoodName,
+        description: null,
+        category: ""
+      });
       setNewFoodName("");
+      // Forçar atualização imediata dos dados
+      await refetchFoods();
     } catch (error) {
       console.error("Erro ao criar alimento:", error);
     }
@@ -45,7 +58,16 @@ export function ManageFoods() {
       open: true,
       title: "Excluir Alimento",
       description: `Tem certeza que deseja excluir o alimento "${name}"?`,
-      onConfirm: () => deleteFood.mutateAsync(id)
+      onConfirm: async () => {
+        try {
+          await deleteFood.mutateAsync(id);
+          // Forçar atualização imediata dos dados
+          await refetchFoods();
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          console.error("Erro ao excluir alimento:", error);
+        }
+      }
     });
   };
 

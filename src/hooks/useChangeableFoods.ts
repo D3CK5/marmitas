@@ -42,8 +42,8 @@ export function useChangeableFoods() {
   const queryClient = useQueryClient();
 
   // Buscar todos os alimentos disponíveis
-  const { data: foods } = useQuery<Food[]>({
-    queryKey: ["foods"],
+  const { data: foods, refetch: refetchFoods } = useQuery<Food[]>({
+    queryKey: ["changeable-foods"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("changeable_foods")
@@ -107,16 +107,16 @@ export function useChangeableFoods() {
         }
       } else {
         // Se for um alimento padrão, verificar se já existe
-        const { data: existing } = await supabase
+      const { data: existing } = await supabase
           .from("product_changeable_foods")
-          .select("id")
+        .select("id")
           .eq("product_id", productId)
-          .eq("default_food_id", defaultFoodId)
+        .eq("default_food_id", defaultFoodId)
           .is("alternative_food_id", null);
 
         if (existing && existing.length > 0) {
           toast.error("Este alimento já está cadastrado");
-          return;
+        return;
         }
       }
 
@@ -136,7 +136,7 @@ export function useChangeableFoods() {
 
       // Invalidar cache
       await queryClient.invalidateQueries({ queryKey: ["product-foods", productId] });
-      
+
       // Só mostrar o toast de sucesso se não houver erro
       toast.success(alternativeFoodId ? "Substituto adicionado!" : "Alimento adicionado!");
     } catch (error) {
@@ -153,9 +153,9 @@ export function useChangeableFoods() {
         .eq("id", foodId);
 
       if (error) {
-        toast.error("Erro ao remover alimento");
-        throw error;
-      }
+      toast.error("Erro ao remover alimento");
+      throw error;
+    }
 
       toast.success("Alimento removido!");
       
@@ -169,6 +169,18 @@ export function useChangeableFoods() {
   // Criar alimento
   const createFood = useMutation({
     mutationFn: async (food: Omit<ChangeableFood, "id" | "created_at">) => {
+      // Verificar se já existe um alimento com o mesmo nome
+      const { data: existingFoods, error: searchError } = await supabase
+        .from("changeable_foods")
+        .select("id")
+        .eq("name", food.name);
+
+      if (searchError) throw searchError;
+      
+      if (existingFoods && existingFoods.length > 0) {
+        throw new Error("Já existe um alimento com este nome");
+      }
+
       const { data, error } = await supabase
         .from("changeable_foods")
         .insert(food)
@@ -181,6 +193,9 @@ export function useChangeableFoods() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["changeable-foods"] });
       toast.success("Alimento criado com sucesso!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 
@@ -206,32 +221,42 @@ export function useChangeableFoods() {
     },
   });
 
-  // Excluir alimento
-  const deleteFood = useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .rpc('delete_changeable_food', { food_id: id });
+// Excluir alimento
+const deleteFood = useMutation({
+  mutationFn: async (id: number) => {
+    // Primeiro deletar o alimento
+    const { error: deleteError } = await supabase
+      .rpc('delete_changeable_food', { target_food_id: id });
 
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["changeable-foods"] });
-      // Invalidar todas as consultas de produtos, já que os alimentos podem estar vinculados a vários produtos
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product-foods"] });
-      toast.success("Alimento excluído com sucesso!");
-    },
-  });
+    if (deleteError) throw deleteError;
+
+    // Esperar um pouco antes de reorganizar
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Depois reorganizar os IDs
+    const { error: reorganizeError } = await supabase
+      .rpc('reorganize_changeable_foods_ids');
+
+    if (reorganizeError) throw reorganizeError;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["changeable-foods"] });
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["product-foods"] });
+    queryClient.invalidateQueries({ queryKey: ["foods"] });
+    toast.success("Alimento excluído com sucesso!");
+  },
+});
 
   // Função para limpar alimentos vinculados em uma sessão
   const clearSessionFoods = async (productId: number) => {
     try {
       const { error } = await supabase
-        .from("product_changeable_foods")
-        .delete()
+          .from("product_changeable_foods")
+          .delete()
         .eq("product_id", productId);
 
-      if (error) throw error;
+        if (error) throw error;
 
       await queryClient.invalidateQueries({ 
         queryKey: ["product-foods", productId],
@@ -303,6 +328,7 @@ export function useChangeableFoods() {
 
   return {
     foods,
+    refetchFoods,
     createFood,
     getProductFoods,
     linkFoodToProduct,
