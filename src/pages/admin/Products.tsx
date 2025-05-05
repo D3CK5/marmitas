@@ -334,28 +334,30 @@ export default function Products() {
             <FileDown className="mr-2 h-4 w-4" />
             Exportar
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setIsTrashDialogOpen(true)}
-            className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
-          >
-            <Trash className="h-4 w-4 text-red-500" />
-            Lixeira
-            {deletedProducts?.length > 0 && (
+          {deletedProducts?.length > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTrashDialogOpen(true)}
+              className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
+            >
+              <Trash className="h-4 w-4 text-red-500" />
+              Lixeira
               <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
                 {deletedProducts.length}
               </span>
-            )}
-          </Button>
+            </Button>
+          )}
           {selectedIds.length > 0 && (
             <Button 
-              variant="destructive" 
+              variant="outline" 
               onClick={handleBulkDelete}
-              className="ml-auto"
+              className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir Selecionados ({selectedIds.length})
-            </Button>
+              <Trash className="h-4 w-4 text-red-500"/>
+                <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
+                  {selectedIds.length}
+                </span>
+              </Button>
           )}
         </div>
 
