@@ -337,12 +337,12 @@ export default function Products() {
           <Button 
             variant="outline" 
             onClick={() => setIsTrashDialogOpen(true)}
-            className="gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-foreground"
+            className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
           >
             <Trash className="h-4 w-4 text-red-500" />
-            <span>Lixeira</span>
+            Lixeira
             {deletedProducts?.length > 0 && (
-              <span className="ml-1 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
                 {deletedProducts.length}
               </span>
             )}

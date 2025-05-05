@@ -19,6 +19,7 @@ export interface Order {
   total: number;
   user_id: string;
   address_id: string;
+  deleted_at?: string | null;
   items: OrderItem[];
   user: {
     id: string;
@@ -40,7 +41,7 @@ export interface Order {
 export function useAdminOrders() {
   const queryClient = useQueryClient();
 
-  // Buscar todos os pedidos
+  // Buscar todos os pedidos ativos (não excluídos)
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
@@ -53,8 +54,10 @@ export function useAdminOrders() {
             status,
             total,
             user_id,
-            address_id
+            address_id,
+            deleted_at
           `)
+          .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -114,6 +117,51 @@ export function useAdminOrders() {
     staleTime: 1000 * 60, // 1 minuto
   });
 
+  // Buscar pedidos excluídos (na lixeira)
+  const { data: deletedOrders, isLoading: isLoadingDeleted } = useQuery({
+    queryKey: ["deleted-orders"],
+    queryFn: async () => {
+      try {
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            created_at,
+            status,
+            total,
+            user_id,
+            address_id,
+            deleted_at
+          `)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Buscar informações dos usuários
+        const userIds = orders.map(order => order.user_id);
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', userIds);
+
+        if (usersError) throw usersError;
+
+        return orders.map(order => {
+          const user = users.find(u => u.id === order.user_id);
+          return {
+            ...order,
+            user: user || { id: order.user_id, full_name: 'Usuário Desconhecido', phone: '' },
+          };
+        });
+      } catch (error) {
+        console.error('Erro ao buscar pedidos excluídos:', error);
+        return [];
+      }
+    },
+    staleTime: 1000 * 60, // 1 minuto
+  });
+
   // Atualizar status do pedido
   const updateOrderStatus = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
@@ -133,9 +181,82 @@ export function useAdminOrders() {
     }
   });
 
+  // Soft delete (mover para a lixeira)
+  const softDeleteOrders = useMutation({
+    mutationFn: async (orderIds: number[]) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', orderIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["deleted-orders"] });
+      toast.success("Pedidos movidos para a lixeira!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao mover pedidos para a lixeira: " + (error.message || "Erro desconhecido"));
+    }
+  });
+
+  // Restaurar pedidos da lixeira
+  const restoreOrders = useMutation({
+    mutationFn: async (orderIds: number[]) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ deleted_at: null })
+        .in('id', orderIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["deleted-orders"] });
+      toast.success("Pedidos restaurados com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao restaurar pedidos: " + (error.message || "Erro desconhecido"));
+    }
+  });
+
+  // Exclusão permanente
+  const permanentDeleteOrders = useMutation({
+    mutationFn: async (orderIds: number[]) => {
+      // Primeiro, excluir os itens do pedido
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .in('order_id', orderIds);
+
+      if (itemsError) throw itemsError;
+
+      // Depois, excluir os pedidos
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', orderIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deleted-orders"] });
+      toast.success("Pedidos excluídos permanentemente!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao excluir pedidos permanentemente: " + (error.message || "Erro desconhecido"));
+    }
+  });
+
   return {
     orders,
     isLoading,
-    updateOrderStatus
+    updateOrderStatus,
+    softDeleteOrders,
+    restoreOrders,
+    permanentDeleteOrders,
+    deletedOrders,
+    isLoadingDeleted
   };
 } 
