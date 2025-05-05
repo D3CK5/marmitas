@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash } from "lucide-react";
+import { Plus, Pencil, Trash, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { CustomAlertDialog } from "@/components/ui/alert-dialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CategoryManagerProps {
   onClose: () => void;
 }
 
 export function CategoryManager({ onClose }: CategoryManagerProps) {
-  const { categories, createCategory, updateCategory, deleteCategory } = useCategories();
+  const queryClient = useQueryClient();
+  const { categories, createCategory, updateCategory, deleteCategory, refetchCategories } = useCategories();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ id: number; name: string } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -27,11 +29,22 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     onConfirm: () => {},
   });
 
+  // Recarregar categorias quando o componente for montado
+  useEffect(() => {
+    refetchCategories();
+  }, [refetchCategories]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       if (editingCategory) {
+        // Verificar se é a categoria padrão
+        if (editingCategory.id === 1) {
+          toast.error("A categoria padrão não pode ser alterada");
+          return;
+        }
+        
         await updateCategory.mutateAsync({
           id: editingCategory.id,
           name: newCategoryName,
@@ -44,18 +57,33 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
       setNewCategoryName("");
       setEditingCategory(null);
+      await refetchCategories();
     } catch (error) {
       console.error('Erro:', error);
       toast.error('Erro ao salvar categoria');
     }
   };
 
-  const handleDelete = (id: number, name: string) => {
+  const handleDelete = (id: number, name: string, isDefault: boolean) => {
+    // Verificar se é a categoria padrão
+    if (isDefault) {
+      toast.error("A categoria padrão não pode ser excluída");
+      return;
+    }
+    
     setConfirmDialog({
       open: true,
       title: "Excluir Categoria",
-      description: `Tem certeza que deseja excluir a categoria "${name}"?`,
-      onConfirm: () => deleteCategory.mutateAsync(id)
+      description: `Tem certeza que deseja excluir a categoria "${name}"? Os produtos desta categoria serão movidos para "Sem Categoria".`,
+      onConfirm: async () => {
+        try {
+          await deleteCategory.mutateAsync(id);
+          await refetchCategories();
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          console.error('Erro ao excluir categoria:', error);
+        }
+      }
     });
   };
 
@@ -83,27 +111,37 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
         {categories?.map((category) => (
           <div
             key={category.id}
-            className="flex items-center justify-between rounded-lg border p-3"
+            className={`flex items-center justify-between rounded-lg border p-3 ${category.is_default ? 'bg-muted' : ''}`}
           >
-            <span>{category.name}</span>
+            <div className="flex items-center gap-2">
+              {category.is_default && <Lock className="h-4 w-4 text-muted-foreground" />}
+              <span>{category.name}</span>
+              {category.is_default && (
+                <span className="text-xs text-muted-foreground">(Padrão)</span>
+              )}
+            </div>
             <div className="flex space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setEditingCategory({ id: category.id, name: category.name });
-                  setNewCategoryName(category.name);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDelete(category.id, category.name)}
-              >
-                <Trash className="h-4 w-4" />
-              </Button>
+              {!category.is_default ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setEditingCategory({ id: category.id, name: category.name });
+                      setNewCategoryName(category.name);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(category.id, category.name, !!category.is_default)}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
         ))}
