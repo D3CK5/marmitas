@@ -112,12 +112,26 @@ export async function deleteDeliveryArea(id: string) {
 export async function calculateDeliveryFee(cep: string): Promise<number | null> {
   try {
     const address = await fetchAddressByCep(cep);
-    const { data: areas } = await supabase
+    
+    if (!address) {
+      console.error('Endereço não encontrado para o CEP:', cep);
+      return null;
+    }
+
+    const { data: areas, error } = await supabase
       .from('delivery_areas')
       .select('*')
       .eq('is_active', true);
     
-    if (!areas) return null;
+    if (error) {
+      console.error('Erro ao buscar áreas de entrega:', error);
+      return null;
+    }
+    
+    if (!areas || areas.length === 0) {
+      console.error('Nenhuma área de entrega encontrada');
+      return null;
+    }
     
     // Primeiro, procuramos por uma área de preço variável que corresponda exatamente ao endereço
     let matchingArea = areas.find(area => 
@@ -131,7 +145,10 @@ export async function calculateDeliveryFee(cep: string): Promise<number | null> 
       );
     }
 
-    if (!matchingArea) return null;
+    if (!matchingArea) {
+      console.error('Endereço não está em nenhuma área de entrega:', address);
+      return null;
+    }
 
     return matchingArea.price;
   } catch (error) {

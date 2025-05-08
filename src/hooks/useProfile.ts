@@ -35,6 +35,7 @@ interface Address {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
 }
 
 interface OrderItem {
@@ -102,6 +103,7 @@ export function useProfile() {
         .from("user_addresses")
         .select("*")
         .eq("user_id", user?.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -272,7 +274,7 @@ export function useProfile() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("user_addresses")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", id)
         .eq("user_id", user?.id);
 

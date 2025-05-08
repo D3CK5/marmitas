@@ -26,14 +26,16 @@ interface AddressFormData {
 }
 
 export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated }: AddressStepProps) {
-  const { addresses, addAddress } = useProfile();
+  const { addresses, addAddress, updateAddress } = useProfile();
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [isCalculatingFee, setIsCalculatingFee] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [isNewAddress, setIsNewAddress] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [address, setAddress] = useState<AddressFormData>({
-    receiver: userName,
+    receiver: "",
     street: "",
     number: "",
     complement: "",
@@ -45,12 +47,6 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
   });
 
   useEffect(() => {
-    // Se houver um endereço padrão, seleciona ele e calcula a taxa
-    const defaultAddress = addresses?.find(addr => addr.is_default);
-    if (defaultAddress) {
-      setSelectedAddressId(defaultAddress.id);
-      calculateFee(defaultAddress.postal_code);
-    }
     setIsLoadingAddresses(false);
   }, [addresses]);
 
@@ -104,11 +100,59 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
     }
   };
 
+  const handleNewAddress = () => {
+    setIsNewAddress(true);
+    setSelectedAddressId("");
+    setDeliveryFee(null);
+    onDeliveryFeeCalculated?.(null);
+    // Limpa o formulário
+    setAddress({
+      receiver: userName,
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      postal_code: "",
+      is_default: false
+    });
+  };
+
+  const handleCancelNewAddress = () => {
+    setIsNewAddress(false);
+    // Se tinha um endereço selecionado anteriormente, restaura ele
+    if (addresses && addresses.length > 0) {
+      const lastSelectedAddress = addresses.find(addr => addr.id === selectedAddressId) || addresses[0];
+      handleSelectAddress(lastSelectedAddress.id);
+    }
+  };
+
   const handleSelectAddress = async (addressId: string) => {
+    setIsNewAddress(false);
     const selectedAddress = addresses?.find(addr => addr.id === addressId);
     setSelectedAddressId(addressId);
     if (selectedAddress) {
+      setAddress({
+        receiver: selectedAddress.receiver,
+        street: selectedAddress.street,
+        number: selectedAddress.number,
+        complement: selectedAddress.complement || "",
+        neighborhood: selectedAddress.neighborhood,
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        postal_code: selectedAddress.postal_code,
+        is_default: selectedAddress.is_default
+      });
       await calculateFee(selectedAddress.postal_code);
+      setHasChanges(false);
+    }
+  };
+
+  const handleAddressChange = (field: keyof AddressFormData, value: string) => {
+    setAddress(prev => ({ ...prev, [field]: value }));
+    if (!isNewAddress) {
+      setHasChanges(true);
     }
   };
 
@@ -116,7 +160,7 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
     e.preventDefault();
 
     if (!selectedAddressId && !address.street) {
-      toast.error("Selecione um endereço ou preencha um novo");
+      toast.error("Preencha o endereço de entrega");
       return;
     }
 
@@ -125,25 +169,57 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
       return;
     }
 
-    if (selectedAddressId) {
-      onComplete(selectedAddressId, deliveryFee);
-      return;
-    }
-
-    // Se não selecionou um endereço existente, cadastra o novo
     try {
       setIsLoading(true);
-      const newAddress = await addAddress({
-        ...address,
-        is_default: addresses?.length === 0 // Se for o primeiro endereço, marca como padrão
-      });
 
-      onComplete(newAddress.id, deliveryFee);
+      if (selectedAddressId && hasChanges) {
+        // Atualiza o endereço existente se houve mudanças
+        await updateAddress({
+          id: selectedAddressId,
+          ...address
+        });
+        toast.success("Endereço atualizado com sucesso!");
+      } else if (!selectedAddressId) {
+        // Se não tem nenhum endereço cadastrado, define este como padrão
+        const isFirstAddress = !addresses || addresses.length === 0;
+        // Cria um novo endereço
+        const newAddress = await addAddress({
+          ...address,
+          is_default: isFirstAddress
+        });
+        setSelectedAddressId(newAddress.id);
+      }
+
+      onComplete(selectedAddressId, deliveryFee);
     } catch (error) {
-      toast.error("Erro ao salvar endereço");
+      toast.error(selectedAddressId ? "Erro ao atualizar endereço" : "Erro ao salvar endereço");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Função para formatar o nome da rua
+  const formatStreetName = (street: string) => {
+    // Remove a palavra "Rua" se existir no início
+    let formattedStreet = street.replace(/^(Rua|R\.)\s+/i, "");
+    
+    // Divide o nome em palavras
+    const words = formattedStreet.split(" ");
+    
+    // Se tiver mais de 2 palavras, abrevia as palavras do meio
+    if (words.length > 2) {
+      return words.map((word, index) => {
+        // Mantém a primeira e última palavra completas
+        if (index === 0 || index === words.length - 1) return word;
+        // Abrevia palavras do meio que não sejam preposições
+        if (!/^(de|da|do|das|dos)$/i.test(word)) {
+          return `${word.charAt(0)}.`;
+        }
+        return word;
+      }).join(" ");
+    }
+    
+    return formattedStreet;
   };
 
   if (isLoadingAddresses) {
@@ -156,37 +232,64 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Endereço de Entrega</h2>
-        <p className="text-muted-foreground mb-6">
-          Selecione um endereço salvo ou cadastre um novo
-        </p>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Endereço de Entrega</h2>
+        {addresses && addresses.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={isNewAddress ? handleCancelNewAddress : handleNewAddress}
+            className={isNewAddress ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+          >
+            {isNewAddress ? "Cancelar" : "Novo Endereço"}
+          </Button>
+        )}
       </div>
 
-      {addresses && addresses.length > 0 && (
-        <div className="space-y-2">
+      {addresses && addresses.length > 0 && !isNewAddress && (
+        <div className="space-y-3">
           <p className="text-sm font-medium">Endereços Salvos:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {addresses.map((saved) => (
               <Button
                 key={saved.id}
                 variant={selectedAddressId === saved.id ? "default" : "outline"}
                 type="button"
-                className="justify-start h-auto py-4"
+                className={`w-full justify-start h-auto py-2 px-3 ${
+                  selectedAddressId === saved.id 
+                    ? "bg-primary hover:bg-primary/90" 
+                    : "hover:bg-accent"
+                }`}
                 onClick={() => handleSelectAddress(saved.id)}
               >
-                <div className="text-left">
-                  <p className="font-medium">{saved.receiver}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {saved.street}, {saved.number}
-                    {saved.complement && ` - ${saved.complement}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {saved.neighborhood} - {saved.city}/{saved.state}
-                  </p>
-                  {saved.is_default && (
-                    <p className="text-sm text-primary mt-1">Endereço padrão</p>
-                  )}
+                <div className="text-left w-full">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-base truncate">
+                      {saved.receiver}
+                    </p>
+                    {saved.is_default && (
+                      <span className="text-[10px] font-medium bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                        Padrão
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-0.5 mt-0.5">
+                    <p className={`text-sm truncate ${
+                      selectedAddressId === saved.id 
+                        ? "text-primary-foreground" 
+                        : "text-foreground"
+                    }`}>
+                      R. {formatStreetName(saved.street)}
+                    </p>
+                    <p className={`text-sm truncate ${
+                      selectedAddressId === saved.id 
+                        ? "text-primary-foreground/90" 
+                        : "text-foreground/90"
+                    }`}>
+                      {saved.number}
+                      {saved.complement && ` - ${saved.complement}`}
+                    </p>
+                  </div>
                 </div>
               </Button>
             ))}
@@ -194,112 +297,122 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
         </div>
       )}
 
-      {!selectedAddressId && (
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="receiver">Recebedor</Label>
-            <Input
-              id="receiver"
-              value={address.receiver}
-              onChange={(e) => setAddress({ ...address, receiver: e.target.value })}
-              placeholder="Nome de quem vai receber"
-              required
-            />
-          </div>
+      <div className="grid gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="receiver">Recebedor</Label>
+          <Input
+            id="receiver"
+            value={address.receiver}
+            onChange={(e) => handleAddressChange("receiver", e.target.value)}
+            required
+            disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="postal_code">CEP</Label>
-            <Input
-              id="postal_code"
-              value={address.postal_code}
-              onChange={(e) => setAddress({ ...address, postal_code: e.target.value.replace(/\D/g, '') })}
-              onBlur={handleCepBlur}
-              placeholder="00000000"
-              required
-              maxLength={8}
-            />
-            <p className="text-sm text-muted-foreground">
-              Digite o CEP para preenchimento automático
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="postal_code">CEP</Label>
+          <Input
+            id="postal_code"
+            value={address.postal_code}
+            onChange={(e) => {
+              const cep = e.target.value.replace(/\D/g, "");
+              if (cep.length <= 8) {
+                handleAddressChange("postal_code", cep);
+              }
+            }}
+            onBlur={handleCepBlur}
+            required
+            maxLength={8}
+            placeholder="Somente números"
+            disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+          />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="street">Rua</Label>
             <Input
               id="street"
               value={address.street}
-              onChange={(e) => setAddress({ ...address, street: e.target.value })}
+              onChange={(e) => handleAddressChange("street", e.target.value)}
               required
+              disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="number">Número</Label>
-              <Input
-                id="number"
-                value={address.number}
-                onChange={(e) => setAddress({ ...address, number: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="complement">Complemento</Label>
-              <Input
-                id="complement"
-                value={address.complement}
-                onChange={(e) => setAddress({ ...address, complement: e.target.value })}
-                placeholder="Opcional"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="number">Número</Label>
+            <Input
+              id="number"
+              value={address.number}
+              onChange={(e) => handleAddressChange("number", e.target.value)}
+              required
+              disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+            />
           </div>
+        </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="complement">Complemento</Label>
+          <Input
+            id="complement"
+            value={address.complement}
+            onChange={(e) => handleAddressChange("complement", e.target.value)}
+            placeholder="Opcional"
+            disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="neighborhood">Bairro</Label>
             <Input
               id="neighborhood"
               value={address.neighborhood}
-              onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
+              onChange={(e) => handleAddressChange("neighborhood", e.target.value)}
               required
+              disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">Cidade</Label>
-              <Input
-                id="city"
-                value={address.city}
-                onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">Estado</Label>
-              <Input
-                id="state"
-                value={address.state}
-                onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                required
-                maxLength={2}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              value={address.city}
+              onChange={(e) => handleAddressChange("city", e.target.value)}
+              required
+              disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+            />
           </div>
         </div>
-      )}
 
-      <div className="flex justify-end gap-2">
-        <Button
-          type="submit"
-          disabled={isLoading || isCalculatingFee || deliveryFee === null}
-          className="w-full md:w-auto"
+        <div className="space-y-2">
+          <Label htmlFor="state">Estado</Label>
+          <Input
+            id="state"
+            value={address.state}
+            onChange={(e) => handleAddressChange("state", e.target.value)}
+            required
+            disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button 
+          type="submit" 
+          disabled={isLoading || deliveryFee === null || isCalculatingFee}
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Salvando...
+            </>
+          ) : isCalculatingFee ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Calculando frete...
             </>
           ) : (
             "Continuar"

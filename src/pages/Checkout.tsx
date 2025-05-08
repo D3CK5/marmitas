@@ -91,7 +91,7 @@ export default function Checkout() {
               {currentStep === "auth" ? (
                 <span>--</span>
               ) : deliveryFee === null ? (
-                <span>...</span>
+                <span className="text-muted-foreground">...</span>
               ) : (
                 <span>R$ {deliveryFee.toFixed(2)}</span>
               )}
