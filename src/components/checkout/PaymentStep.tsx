@@ -50,18 +50,18 @@ const MOCK_TERMS = [
 
 interface PaymentStepProps {
   selectedAddressId: string;
+  deliveryFee: number;
+  total: number;
 }
 
-export function PaymentStep({ selectedAddressId }: PaymentStepProps) {
+export function PaymentStep({ selectedAddressId, deliveryFee, total }: PaymentStepProps) {
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
   const [installments, setInstallments] = useState("1");
   const [isLoading, setIsLoading] = useState(false);
-  const { items, total, clearCart } = useCart();
+  const { items, clearCart } = useCart();
   const { createOrder } = useOrders();
   const navigate = useNavigate();
 
-  // Simulando taxa de entrega baseada no CEP
-  const deliveryFee = 5.90; // Exemplo fixo, deve vir do backend
   const finalTotal = total + deliveryFee;
 
   const handleFinishOrder = async () => {
@@ -77,7 +77,7 @@ export function PaymentStep({ selectedAddressId }: PaymentStepProps) {
       }));
 
       // Criar o pedido
-      const order = await createOrder({
+      const orderData = {
         address_id: selectedAddressId,
         payment_method: paymentMethod,
         payment_details: {
@@ -87,7 +87,9 @@ export function PaymentStep({ selectedAddressId }: PaymentStepProps) {
         subtotal: total,
         delivery_fee: deliveryFee,
         total: finalTotal
-      });
+      };
+
+      const order = await createOrder.mutateAsync(orderData);
       
       toast.success("Pedido realizado com sucesso!");
       clearCart();

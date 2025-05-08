@@ -17,6 +17,7 @@ type CheckoutStep = "auth" | "address" | "payment";
 export default function Checkout() {
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("auth");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const { items, total, updateQuantity, removeItem } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,56 +33,54 @@ export default function Checkout() {
     { id: "payment", title: "Pagamento" },
   ];
 
+  const handleDeliveryFeeCalculated = (fee: number | null) => {
+    setDeliveryFee(fee);
+  };
+
   const OrderSummary = () => {
-    // Simulando taxa de entrega baseada no CEP
-    const deliveryFee = 5.90; // Exemplo fixo, deve vir do backend
-    const finalTotal = total + deliveryFee;
+    const finalTotal = deliveryFee !== null ? total + deliveryFee : total;
 
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="font-semibold text-lg mb-4">Resumo do Pedido</h3>
         <div className="space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-start space-x-4">
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-16 h-16 object-cover rounded"
-              />
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground">
-                      {item.quantity}x {item.title}
-                    </span>
+          <div className="space-y-2">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                    <div className="absolute -top-2 -right-2 bg-primary text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                      {item.quantity}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      R$ {item.price.toFixed(2)}
+                    </p>
                     {item.notes && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Obs: {item.notes}
                       </p>
                     )}
                   </div>
-                  <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
                 </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <QuantityCounter
-                    quantity={item.quantity}
-                    onQuantityChange={(q) => updateQuantity(item.id, q)}
-                    min={0}
-                  />
-                  {item.quantity === 0 && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                    >
-                      Remover
-                    </Button>
-                  )}
+                <div className="text-right">
+                  <p className="font-medium">
+                    R$ {(item.price * item.quantity).toFixed(2)}
+                  </p>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
           <Separator />
+
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
@@ -89,7 +88,13 @@ export default function Checkout() {
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Taxa de Entrega</span>
-              <span>R$ {deliveryFee.toFixed(2)}</span>
+              {currentStep === "auth" ? (
+                <span>--</span>
+              ) : deliveryFee === null ? (
+                <span>...</span>
+              ) : (
+                <span>R$ {deliveryFee.toFixed(2)}</span>
+              )}
             </div>
             <Separator />
             <div className="flex justify-between font-semibold">
@@ -125,15 +130,21 @@ export default function Checkout() {
               )}
               {currentStep === "address" && (
                 <AddressStep 
-                  onComplete={(addressId) => {
+                  onComplete={(addressId, fee) => {
                     setSelectedAddressId(addressId);
+                    setDeliveryFee(fee);
                     setCurrentStep("payment");
                   }}
-                  userName={user?.user_metadata?.full_name}
+                  onDeliveryFeeCalculated={handleDeliveryFeeCalculated}
+                  userName={user?.email?.split('@')[0] || ''}
                 />
               )}
               {currentStep === "payment" && (
-                <PaymentStep selectedAddressId={selectedAddressId} />
+                <PaymentStep 
+                  selectedAddressId={selectedAddressId}
+                  deliveryFee={deliveryFee || 0}
+                  total={total}
+                />
               )}
             </div>
             

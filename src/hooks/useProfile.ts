@@ -24,6 +24,7 @@ interface Profile {
 interface Address {
   id: string;
   user_id: string;
+  receiver: string;
   street: string;
   number: string;
   complement?: string;

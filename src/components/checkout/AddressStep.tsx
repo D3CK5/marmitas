@@ -4,53 +4,86 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
+import { calculateDeliveryFee } from "@/components/api/delivery-areas";
+import { Loader2 } from "lucide-react";
 
 interface AddressStepProps {
-  onComplete: (addressId: string) => void;
+  onComplete: (addressId: string, deliveryFee: number) => void;
   userName?: string;
+  onDeliveryFeeCalculated?: (fee: number | null) => void;
 }
 
-export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
-  const { getAddresses, addAddress } = useProfile();
-  const [addresses, setAddresses] = useState<any[]>([]);
+interface AddressFormData {
+  receiver: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  is_default?: boolean;
+}
+
+export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated }: AddressStepProps) {
+  const { addresses, addAddress } = useProfile();
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
-  const [address, setAddress] = useState({
+  const [isCalculatingFee, setIsCalculatingFee] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [address, setAddress] = useState<AddressFormData>({
     receiver: userName,
-    cep: "",
     street: "",
     number: "",
     complement: "",
     neighborhood: "",
     city: "",
     state: "",
+    postal_code: "",
+    is_default: false
   });
 
   useEffect(() => {
-    loadAddresses();
-  }, []);
+    // Se houver um endereço padrão, seleciona ele e calcula a taxa
+    const defaultAddress = addresses?.find(addr => addr.is_default);
+    if (defaultAddress) {
+      setSelectedAddressId(defaultAddress.id);
+      calculateFee(defaultAddress.postal_code);
+    }
+    setIsLoadingAddresses(false);
+  }, [addresses]);
 
-  const loadAddresses = async () => {
+  const calculateFee = async (postalCode: string) => {
+    setIsCalculatingFee(true);
+    setDeliveryFee(null);
+    onDeliveryFeeCalculated?.(null); // Notifica que está calculando
+    
     try {
-      const userAddresses = await getAddresses();
-      setAddresses(userAddresses);
-      // Se houver um endereço padrão, seleciona ele
-      const defaultAddress = userAddresses.find(addr => addr.is_default);
-      if (defaultAddress) {
-        setSelectedAddressId(defaultAddress.id);
+      const fee = await calculateDeliveryFee(postalCode);
+      if (fee === null) {
+        toast.error("Não entregamos nesta região");
+        setDeliveryFee(null);
+        onDeliveryFeeCalculated?.(null);
+        return false;
       }
+      setDeliveryFee(fee);
+      onDeliveryFeeCalculated?.(fee); // Notifica o novo valor da taxa
+      return true;
     } catch (error) {
-      toast.error("Erro ao carregar endereços");
+      console.error("Erro ao calcular frete:", error);
+      toast.error("Erro ao calcular frete");
+      onDeliveryFeeCalculated?.(null);
+      return false;
     } finally {
-      setIsLoadingAddresses(false);
+      setIsCalculatingFee(false);
     }
   };
 
   const handleCepBlur = async () => {
-    if (address.cep.length === 8) {
+    if (address.postal_code.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${address.cep}/json/`);
+        const response = await fetch(`https://viacep.com.br/ws/${address.postal_code}/json/`);
         const data = await response.json();
         
         if (!data.erro) {
@@ -61,6 +94,9 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
             city: data.localidade,
             state: data.uf,
           }));
+
+          // Calcular taxa de entrega
+          await calculateFee(address.postal_code);
         }
       } catch (error) {
         toast.error("Erro ao buscar CEP");
@@ -68,8 +104,12 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
     }
   };
 
-  const handleSelectAddress = (addressId: string) => {
+  const handleSelectAddress = async (addressId: string) => {
+    const selectedAddress = addresses?.find(addr => addr.id === addressId);
     setSelectedAddressId(addressId);
+    if (selectedAddress) {
+      await calculateFee(selectedAddress.postal_code);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,8 +120,13 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
       return;
     }
 
+    if (deliveryFee === null) {
+      toast.error("Não é possível prosseguir sem uma taxa de entrega válida");
+      return;
+    }
+
     if (selectedAddressId) {
-      onComplete(selectedAddressId);
+      onComplete(selectedAddressId, deliveryFee);
       return;
     }
 
@@ -89,18 +134,11 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
     try {
       setIsLoading(true);
       const newAddress = await addAddress({
-        cep: address.cep,
-        street: address.street,
-        number: address.number,
-        complement: address.complement,
-        neighborhood: address.neighborhood,
-        city: address.city,
-        state: address.state,
-        receiver: address.receiver,
-        is_default: addresses.length === 0 // Se for o primeiro endereço, marca como padrão
+        ...address,
+        is_default: addresses?.length === 0 // Se for o primeiro endereço, marca como padrão
       });
 
-      onComplete(newAddress.id);
+      onComplete(newAddress.id, deliveryFee);
     } catch (error) {
       toast.error("Erro ao salvar endereço");
     } finally {
@@ -109,7 +147,11 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
   };
 
   if (isLoadingAddresses) {
-    return <div>Carregando endereços...</div>;
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
@@ -121,7 +163,7 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
         </p>
       </div>
 
-      {addresses.length > 0 && (
+      {addresses && addresses.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium">Endereços Salvos:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -166,11 +208,11 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cep">CEP</Label>
+            <Label htmlFor="postal_code">CEP</Label>
             <Input
-              id="cep"
-              value={address.cep}
-              onChange={(e) => setAddress({ ...address, cep: e.target.value.replace(/\D/g, '') })}
+              id="postal_code"
+              value={address.postal_code}
+              onChange={(e) => setAddress({ ...address, postal_code: e.target.value.replace(/\D/g, '') })}
               onBlur={handleCepBlur}
               placeholder="00000000"
               required
@@ -248,9 +290,22 @@ export function AddressStep({ onComplete, userName = "" }: AddressStepProps) {
         </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Salvando..." : "Continuar"}
-      </Button>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="submit"
+          disabled={isLoading || isCalculatingFee || deliveryFee === null}
+          className="w-full md:w-auto"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            "Continuar"
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
