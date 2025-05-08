@@ -77,54 +77,48 @@ export function useCustomer() {
   });
 
   // Buscar detalhes de um cliente específico
-  const useCustomerDetails = (userId: string) => {
-    return useQuery({
-      queryKey: ["customer", userId],
-      queryFn: async () => {
-        try {
-          // Buscar perfil do usuário
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .single();
+  const getCustomerDetails = async (userId: string) => {
+    try {
+      // Buscar perfil do usuário
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-          if (profileError) throw profileError;
+      if (profileError) throw profileError;
 
-          // Buscar endereços do usuário
-          const { data: addresses, error: addressesError } = await supabase
-            .from("user_addresses")
-            .select("*")
-            .eq("user_id", userId);
+      // Buscar endereços do usuário
+      const { data: addresses, error: addressesError } = await supabase
+        .from("user_addresses")
+        .select("*")
+        .eq("user_id", userId);
 
-          if (addressesError) throw addressesError;
+      if (addressesError) throw addressesError;
 
-          // Buscar pedidos do usuário
-          const { data: orders, error: ordersError } = await supabase
-            .from("orders")
-            .select("id, created_at, status, total")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false });
+      // Buscar pedidos do usuário
+      const { data: orders, error: ordersError } = await supabase
+        .from("orders")
+        .select("id, created_at, status, total")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
-          if (ordersError) throw ordersError;
+      if (ordersError) throw ordersError;
 
-          // Usar diretamente o email do perfil em vez de tentar acessar a tabela auth.users
-          const email = profile?.email || "Não disponível";
+      // Usar diretamente o email do perfil em vez de tentar acessar a tabela auth.users
+      const email = profile?.email || "Não disponível";
 
-          // Combinar todos os dados
-          return {
-            ...profile,
-            email,
-            addresses: addresses || [],
-            orders: orders || []
-          } as CustomerDetails;
-        } catch (error) {
-          console.error("Erro ao buscar detalhes do cliente:", error);
-          return null;
-        }
-      },
-      staleTime: 1000 * 60, // 1 minuto
-    });
+      // Combinar todos os dados
+      return {
+        ...profile,
+        email,
+        addresses: addresses || [],
+        orders: orders || []
+      } as CustomerDetails;
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do cliente:", error);
+      throw error;
+    }
   };
 
   // Atualizar cliente
@@ -149,7 +143,7 @@ export function useCustomer() {
   return {
     customers,
     isLoading,
-    useCustomerDetails,
+    getCustomerDetails,
     updateCustomer
   };
 } 

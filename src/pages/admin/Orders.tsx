@@ -217,18 +217,18 @@ export default function Orders() {
             </Button>
             
             {deletedOrders && deletedOrders.length > 0 && (
-              <Button 
-                variant="outline" 
-                onClick={() => setIsTrashDialogOpen(true)}
-                className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
-              >
-                <Trash className="h-4 w-4 text-red-500" />
-                Lixeira
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTrashDialogOpen(true)}
+              className="relative text-black hover:bg-red-50 hover:text-black border-red-300"
+            >
+              <Trash className="h-4 w-4 text-red-500" />
+              Lixeira
                 <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
                   {deletedOrders.length}
                 </span>
               </Button>
-            )}
+              )}
             
             {selectedIds.length > 0 && (
               <Button 

@@ -330,6 +330,11 @@ export function CustomerDetails({ customer, onUpdate }: CustomerDetailsProps) {
     }
   }, [customer?.id]);
 
+  // Carregar endereços ao inicializar o componente
+  useEffect(() => {
+    setAddresses(customer.addresses || []);
+  }, [customer.addresses]);
+
   // Função que lida com o salvamento de um endereço (novo ou existente)
   const handleSaveAddress = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
