@@ -183,10 +183,10 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
         // Se não tem nenhum endereço cadastrado, define este como padrão
         const isFirstAddress = !addresses || addresses.length === 0;
         // Cria um novo endereço
-        const newAddress = await addAddress({
+      const newAddress = await addAddress({
           ...address,
           is_default: isFirstAddress
-        });
+      });
         setSelectedAddressId(newAddress.id);
       }
 
@@ -266,8 +266,8 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-base truncate">
                       {saved.receiver}
-                    </p>
-                    {saved.is_default && (
+                  </p>
+                  {saved.is_default && (
                       <span className="text-[10px] font-medium bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                         Padrão
                       </span>
@@ -297,21 +297,21 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
         </div>
       )}
 
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="receiver">Recebedor</Label>
-          <Input
-            id="receiver"
-            value={address.receiver}
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="receiver">Recebedor</Label>
+            <Input
+              id="receiver"
+              value={address.receiver}
             onChange={(e) => handleAddressChange("receiver", e.target.value)}
-            required
+              required
             disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-          />
-        </div>
+            />
+          </div>
 
-        <div className="space-y-2">
+          <div className="space-y-2">
           <Label htmlFor="postal_code">CEP</Label>
-          <Input
+            <Input
             id="postal_code"
             value={address.postal_code}
             onChange={(e) => {
@@ -320,13 +320,13 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
                 handleAddressChange("postal_code", cep);
               }
             }}
-            onBlur={handleCepBlur}
-            required
-            maxLength={8}
+              onBlur={handleCepBlur}
+              required
+              maxLength={8}
             placeholder="Somente números"
             disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-          />
-        </div>
+            />
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -340,28 +340,28 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="number">Número</Label>
-            <Input
-              id="number"
-              value={address.number}
+            <div className="space-y-2">
+              <Label htmlFor="number">Número</Label>
+              <Input
+                id="number"
+                value={address.number}
               onChange={(e) => handleAddressChange("number", e.target.value)}
-              required
+                required
               disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-            />
+              />
           </div>
-        </div>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="complement">Complemento</Label>
-          <Input
-            id="complement"
-            value={address.complement}
+            <div className="space-y-2">
+              <Label htmlFor="complement">Complemento</Label>
+              <Input
+                id="complement"
+                value={address.complement}
             onChange={(e) => handleAddressChange("complement", e.target.value)}
-            placeholder="Opcional"
+                placeholder="Opcional"
             disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-          />
-        </div>
+              />
+          </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -375,29 +375,29 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="city">Cidade</Label>
-            <Input
-              id="city"
-              value={address.city}
+            <div className="space-y-2">
+              <Label htmlFor="city">Cidade</Label>
+              <Input
+                id="city"
+                value={address.city}
               onChange={(e) => handleAddressChange("city", e.target.value)}
-              required
+                required
               disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-            />
+              />
           </div>
-        </div>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="state">Estado</Label>
-          <Input
-            id="state"
-            value={address.state}
+            <div className="space-y-2">
+              <Label htmlFor="state">Estado</Label>
+              <Input
+                id="state"
+                value={address.state}
             onChange={(e) => handleAddressChange("state", e.target.value)}
-            required
+                required
             disabled={addresses?.length > 0 && !isNewAddress && !selectedAddressId}
-          />
-        </div>
-      </div>
+              />
+            </div>
+          </div>
 
       <div className="flex justify-end space-x-2">
         <Button 
@@ -417,7 +417,7 @@ export function AddressStep({ onComplete, userName = "", onDeliveryFeeCalculated
           ) : (
             "Continuar"
           )}
-        </Button>
+      </Button>
       </div>
     </form>
   );

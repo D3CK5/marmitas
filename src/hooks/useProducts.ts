@@ -183,6 +183,45 @@ export function useProducts() {
   // Exclusão permanente
   const permanentDeleteProducts = useMutation({
     mutationFn: async (ids: number[]) => {
+      // Primeiro, verificar se existem order_items que referenciam estes produtos
+      const { data: orderItems, error: checkError } = await supabase
+        .from("order_items")
+        .select("id, product_id")
+        .in('product_id', ids);
+
+      if (checkError) throw checkError;
+
+      // Se existem order_items, vamos preservar o histórico definindo product_id como NULL
+      // e adicionando informações do produto no campo notes
+      if (orderItems && orderItems.length > 0) {
+        // Buscar informações dos produtos que serão excluídos
+        const { data: productsToDelete, error: productsError } = await supabase
+          .from("products")
+          .select("id, title, price")
+          .in('id', ids);
+
+        if (productsError) throw productsError;
+
+        // Atualizar order_items para preservar informações do produto
+        for (const item of orderItems) {
+          const product = productsToDelete?.find(p => p.id === item.product_id);
+          if (product) {
+            const preservedInfo = `[PRODUTO EXCLUÍDO] ${product.title} - R$ ${product.price.toFixed(2)}`;
+            
+            const { error: updateError } = await supabase
+              .from("order_items")
+              .update({ 
+                product_id: null,
+                notes: preservedInfo
+              })
+              .eq('id', item.id);
+
+            if (updateError) throw updateError;
+          }
+        }
+      }
+
+      // Agora podemos excluir os produtos com segurança
       const { error } = await supabase
         .from("products")
         .delete()
@@ -193,6 +232,10 @@ export function useProducts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deleted-products"] });
       toast.success("Produtos excluídos permanentemente!");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir produtos:", error);
+      toast.error("Erro ao excluir produtos permanentemente: " + (error.message || "Erro desconhecido"));
     },
   });
 

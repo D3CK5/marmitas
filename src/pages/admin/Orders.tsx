@@ -154,9 +154,9 @@ export default function Orders() {
       title: "Esvaziar Lixeira",
       description: `Tem certeza que deseja excluir permanentemente todos os ${deletedOrders.length} pedido(s) da lixeira? Esta ação não pode ser desfeita.`,
       onConfirm: () => {
-        permanentDeleteOrders.mutateAsync(deletedOrders.map(o => o.id));
-        setConfirmDialog(prev => ({ ...prev, open: false }));
-        setIsTrashDialogOpen(false);
+        permanentDeleteOrders.mutateAsync(deletedOrders.map(o => o.id)).then(() => {
+          setIsTrashDialogOpen(false);
+        });
       },
       variant: "destructive"
     });
@@ -376,9 +376,19 @@ export default function Orders() {
                 variant="destructive" 
                 onClick={handleEmptyTrash}
                 className="ml-auto"
+                disabled={permanentDeleteOrders.isPending}
               >
-                <Trash className="mr-2 h-4 w-4" />
-                Esvaziar Lixeira
+                {permanentDeleteOrders.isPending ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash className="mr-2 h-4 w-4" />
+                    Esvaziar Lixeira
+                  </>
+                )}
               </Button>
             </div>
 

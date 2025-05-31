@@ -20,7 +20,7 @@ export function OrderDetails({ order, onStatusUpdate }: OrderDetailsProps) {
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      await updateOrderStatus(order.id, newStatus);
+      await updateOrderStatus.mutateAsync({ orderId: order.id, status: newStatus });
       onStatusUpdate?.();
     } catch (error) {
       // Erro já tratado no hook
@@ -95,7 +95,17 @@ export function OrderDetails({ order, onStatusUpdate }: OrderDetailsProps) {
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between">
               <span>
-                {item.quantity}x {item.product.title}
+                {item.quantity}x {item.product?.title || item.notes || "Produto não disponível"}
+                {item.notes && item.product?.title && (
+                  <span className="text-sm text-muted-foreground block">
+                    Obs: {item.notes}
+                  </span>
+                )}
+                {!item.product?.title && item.notes && (
+                  <span className="text-sm text-red-500 block">
+                    (Produto excluído)
+                  </span>
+                )}
               </span>
               <span className="font-medium">
                 {formatPrice(item.price * item.quantity)}

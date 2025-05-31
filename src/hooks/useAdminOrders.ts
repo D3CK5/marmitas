@@ -7,9 +7,10 @@ export interface OrderItem {
   id: number;
   quantity: number;
   price: number;
-  product: {
+  notes?: string | null;
+  product?: {
     title: string;
-  };
+  } | null;
 }
 
 export interface Order {
@@ -88,6 +89,7 @@ export function useAdminOrders() {
                 id,
                 quantity,
                 price,
+                notes,
                 product:products (
                   title
                 )
@@ -224,15 +226,8 @@ export function useAdminOrders() {
   // Exclusão permanente
   const permanentDeleteOrders = useMutation({
     mutationFn: async (orderIds: number[]) => {
-      // Primeiro, excluir os itens do pedido
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .delete()
-        .in('order_id', orderIds);
-
-      if (itemsError) throw itemsError;
-
-      // Depois, excluir os pedidos
+      // Com CASCADE configurado, só precisamos excluir os pedidos
+      // Os itens serão excluídos automaticamente
       const { error } = await supabase
         .from('orders')
         .delete()
@@ -242,6 +237,7 @@ export function useAdminOrders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deleted-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       toast.success("Pedidos excluídos permanentemente!");
     },
     onError: (error: any) => {
