@@ -175,7 +175,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           if (currentMonth) {
             // Filtrar por mês específico
             const startDate = new Date(currentYear, currentMonth - 1, 1);
-            const endDate = new Date(currentYear, currentMonth, 0);
+            const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
             
             const startDateStr = startDate.toISOString().split('T')[0];
             const endDateStr = endDate.toISOString().split('T')[0];
@@ -190,7 +190,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           } else if (expenseFilters?.year) {
             // Filtrar apenas por ano
             const startDate = new Date(expenseFilters.year, 0, 1);
-            const endDate = new Date(expenseFilters.year, 11, 31);
+            const endDate = new Date(expenseFilters.year, 11, 31, 23, 59, 59, 999);
             
             const startDateStr = startDate.toISOString().split('T')[0];
             const endDateStr = endDate.toISOString().split('T')[0];
@@ -267,7 +267,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           if (currentMonth) {
             // Filtrar por mês específico
             const startDate = new Date(currentYear, currentMonth - 1, 1);
-            const endDate = new Date(currentYear, currentMonth, 0);
+            const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
             
             const startDateStr = startDate.toISOString().split('T')[0];
             const endDateStr = endDate.toISOString().split('T')[0];
@@ -278,7 +278,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           } else if (supplyOrderFilters?.year) {
             // Filtrar apenas por ano
             const startDate = new Date(supplyOrderFilters.year, 0, 1);
-            const endDate = new Date(supplyOrderFilters.year, 11, 31);
+            const endDate = new Date(supplyOrderFilters.year, 11, 31, 23, 59, 59, 999);
             
             const startDateStr = startDate.toISOString().split('T')[0];
             const endDateStr = endDate.toISOString().split('T')[0];
@@ -364,7 +364,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           if (currentMonth) {
             // Filtrar por mês específico
             const startDate = new Date(currentYear, currentMonth - 1, 1);
-            const endDate = new Date(currentYear, currentMonth, 0);
+            const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
             
             revenueQuery = revenueQuery
               .gte('created_at', startDate.toISOString())
@@ -372,7 +372,7 @@ export function useFinance(expenseFilters?: { month?: number; year?: number }, s
           } else if (revenueFilters?.year) {
             // Filtrar apenas por ano
             const startDate = new Date(revenueFilters.year, 0, 1);
-            const endDate = new Date(revenueFilters.year, 11, 31, 23, 59, 59);
+            const endDate = new Date(revenueFilters.year, 11, 31, 23, 59, 59, 999);
             
             revenueQuery = revenueQuery
               .gte('created_at', startDate.toISOString())
