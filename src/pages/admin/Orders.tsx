@@ -25,7 +25,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Trash, FileDown, ArrowUpFromLine, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Search, Trash, FileDown, ArrowUpFromLine, Trash2, Eye, Settings } from "lucide-react";
 import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
 import { OrderDetails } from "@/components/admin/OrderDetails";
 import { useAdminOrders, type Order } from "@/hooks/useAdminOrders";
@@ -33,6 +39,62 @@ import { formatPrice } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAlertDialog } from "@/components/ui/alert-dialog";
 import { DialogCustom } from "@/components/ui/dialog-custom";
+
+interface QuickStatusDropdownProps {
+  order: Order;
+  onStatusUpdate: () => void;
+}
+
+function QuickStatusDropdown({ order, onStatusUpdate }: QuickStatusDropdownProps) {
+  const { updateOrderStatus } = useAdminOrders();
+  
+  const statusOptions = [
+    { value: "pending", label: "Pendente", className: "" },
+    { value: "awaiting_payment", label: "Aguardando Pagamento", className: "" },
+    { value: "preparing", label: "Em Preparação", className: "" },
+    { value: "completed", label: "Concluído", className: "text-green-600" },
+    { value: "cancelled", label: "Cancelado", className: "text-red-600" },
+  ];
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await updateOrderStatus.mutateAsync({ orderId: order.id, status: newStatus });
+      onStatusUpdate();
+    } catch (error) {
+      // Erro já tratado no hook
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Alterar status rapidamente"
+        >
+          <Settings className="h-3.5 w-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {statusOptions.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            onClick={() => handleStatusChange(option.value)}
+            className={`cursor-pointer ${option.className} ${
+              order.status === option.value ? 'bg-gray-100 font-medium' : ''
+            }`}
+            disabled={order.status === option.value}
+          >
+            {option.label}
+            {order.status === option.value && " (Atual)"}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function Orders() {
   const { 
@@ -295,15 +357,24 @@ export default function Orders() {
                       {new Date(order.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
+                        <QuickStatusDropdown 
+                          order={order} 
+                          onStatusUpdate={() => {
+                            // Aqui podemos invalidar queries se necessário
+                            // queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+                          }} 
+                        />
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={() => setSelectedOrder(order)}
+                              title="Ver detalhes do pedido"
                             >
-                              Detalhes
+                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-4xl">
