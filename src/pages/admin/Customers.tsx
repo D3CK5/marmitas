@@ -17,22 +17,36 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MessageCircle, Edit, Trash2, Loader2, Pencil } from "lucide-react";
-import { useCustomer, type Customer } from "@/hooks/useCustomer";
+import { Search, MessageCircle, Edit, Trash2, Loader2, Pencil, Plus } from "lucide-react";
+import { useCustomer, type Customer, getCustomerActivityStatus, type CustomerActivityStatus } from "@/hooks/useCustomer";
 import { formatPrice } from "@/lib/utils";
 import { CustomerDetails } from "@/components/admin/CustomerDetails";
 import { CustomAlertDialog } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { CustomerDetails as ICustomerDetails } from "@/hooks/useCustomer";
+import { CustomerFilters } from "@/components/admin/CustomerFilters";
+import { Label } from "@/components/ui/label";
+
+interface CustomerFiltersType {
+  activityStatus?: CustomerActivityStatus | "all";
+}
 
 export default function Customers() {
-  const { customers, getCustomerDetails, updateCustomerStatus, deleteCustomer, updateCustomer } = useCustomer();
+  const { customers, getCustomerDetails, updateCustomerStatus, deleteCustomer, updateCustomer, createCustomer } = useCustomer();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerDetails, setCustomerDetails] = useState<ICustomerDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [filters, setFilters] = useState<CustomerFiltersType>({ activityStatus: "all" });
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    password: ""
+  });
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -68,8 +82,8 @@ export default function Customers() {
   const handleDelete = (id: string) => {
     setConfirmDialog({
       open: true,
-      title: "Excluir Cliente",
-      description: "Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.",
+      title: "Excluir Cliente Permanentemente",
+      description: "⚠️ ATENÇÃO: Esta ação irá excluir PERMANENTEMENTE o cliente e TODOS os dados relacionados (pedidos, endereços, etc.). Esta ação NÃO pode ser desfeita. Tem certeza que deseja continuar?",
       onConfirm: () => deleteCustomer.mutateAsync(id)
     });
   };
@@ -90,12 +104,71 @@ export default function Customers() {
     }
   };
 
-  const filteredCustomers = customers?.filter(customer => 
-    customer?.is_admin !== true && 
-    ((customer?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (customer?.phone || '').includes(searchTerm))
-  ) || [];
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!createFormData.full_name || !createFormData.email || !createFormData.password) {
+      toast.error("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
+    try {
+      await createCustomer.mutateAsync(createFormData);
+      setCreateFormData({
+        full_name: "",
+        email: "",
+        phone: "",
+        password: ""
+      });
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+    }
+  };
+
+  const resetCreateForm = () => {
+    setCreateFormData({
+      full_name: "",
+      email: "",
+      phone: "",
+      password: ""
+    });
+  };
+
+  const getStatusBadgeVariant = (color: string) => {
+    switch (color) {
+      case 'green': return 'default';
+      case 'yellow': return 'secondary';
+      case 'orange': return 'outline';
+      case 'red': return 'destructive';
+      case 'gray': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+
+  const filteredCustomers = customers?.filter(customer => {
+    // Verificar se o cliente tem ID válido
+    if (!customer?.id) return false;
+    
+    // Filtro básico para excluir admins
+    if (customer?.is_admin === true) return false;
+    
+    // Filtro de busca por texto
+    const matchesSearch = 
+      (customer?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (customer?.phone || '').includes(searchTerm);
+    
+    if (!matchesSearch) return false;
+    
+    // Filtro por status de atividade
+    if (filters.activityStatus !== "all") {
+      const activityStatus = getCustomerActivityStatus(customer.last_purchase);
+      return activityStatus.status === filters.activityStatus;
+    }
+    
+    return true;
+  }) || [];
 
   return (
     <AdminLayout>
@@ -119,23 +192,117 @@ export default function Customers() {
               />
             </div>
           </div>
+          
+          <CustomerFilters 
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetCreateForm}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações abaixo para criar um novo cliente no sistema.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateCustomer} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Nome Completo *</Label>
+                  <Input
+                    id="full_name"
+                    value={createFormData.full_name}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                    placeholder="Digite o nome completo"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={createFormData.email}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Digite o e-mail"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={createFormData.phone}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Digite o telefone (opcional)"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={createFormData.password}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Digite a senha"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createCustomer.isPending}
+                  >
+                    {createCustomer.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      "Criar Cliente"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="rounded-md border">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow key="header">
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Total Gasto</TableHead>
                 <TableHead>Última Compra</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Atividade</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCustomers.map((customer) => (
+              {filteredCustomers.map((customer) => {
+                const activityStatus = getCustomerActivityStatus(customer.last_purchase);
+                
+                return (
                 <TableRow key={customer.id}>
                   <TableCell>{customer.full_name}</TableCell>
                   <TableCell>{customer.email}</TableCell>
@@ -148,14 +315,10 @@ export default function Customers() {
                   </TableCell>
                   <TableCell>
                     <Badge 
-                      variant={customer.is_active ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => updateCustomerStatus.mutateAsync({
-                        userId: customer.id,
-                        isActive: !customer.is_active
-                      })}
+                      variant={getStatusBadgeVariant(activityStatus.color)}
+                      title={`${activityStatus.daysSinceLastPurchase} dias desde a última compra`}
                     >
-                      {customer.is_active ? "Ativo" : "Inativo"}
+                      {activityStatus.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -213,11 +376,15 @@ export default function Customers() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {filteredCustomers.length === 0 && (
-                <TableRow>
+                <TableRow key="no-customers-found">
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhum cliente encontrado
+                    {filters.activityStatus && filters.activityStatus !== "all"
+                      ? `Nenhum cliente encontrado com status "${filters.activityStatus}"`
+                      : "Nenhum cliente encontrado"
+                    }
                   </TableCell>
                 </TableRow>
               )}

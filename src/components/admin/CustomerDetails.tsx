@@ -28,7 +28,8 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import {
@@ -637,6 +638,9 @@ export function CustomerDetails({ customer, onUpdate }: CustomerDetailsProps) {
               <MapPin className="h-5 w-5 text-primary" />
               {editingAddress ? "Editar Endereço" : "Adicionar Endereço"}
             </DialogTitle>
+            <DialogDescription>
+              {editingAddress ? "Modifique as informações do endereço abaixo." : "Adicione um novo endereço para o cliente."}
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleSaveAddress}>
