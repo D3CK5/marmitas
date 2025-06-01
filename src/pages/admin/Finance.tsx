@@ -1,15 +1,34 @@
-
 import { useState } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
-import { ExpenseList } from "@/components/admin/finance/ExpenseList";
-import { IncomeList } from "@/components/admin/finance/IncomeList";
-import { FinancialReports } from "@/components/admin/finance/FinancialReports";
+import { DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
+import { useFinance } from "@/hooks/useFinance";
+import { formatCurrency } from "@/lib/utils";
+import { RevenueChart } from "@/components/admin/finance/RevenueChart";
+import { ExpenseManagement } from "@/components/admin/finance/ExpenseManagement";
+import { SupplyOrderManagement } from "@/components/admin/finance/SupplyOrderManagement";
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("revenues");
+  const [activeSupplierTab, setActiveSupplierTab] = useState("suppliers");
+  const { financialSummary, loadingSummary } = useFinance(undefined, undefined, undefined);
+
+  const getBalanceVariant = () => {
+    if (!financialSummary) return "text-muted-foreground";
+    if (financialSummary.monthlyBalance > 0) return "text-green-600";
+    if (financialSummary.monthlyBalance < 0) return "text-red-600";
+    return "text-muted-foreground";
+  };
+
+  const getBalanceIcon = () => {
+    if (!financialSummary) return TrendingUp;
+    if (financialSummary.monthlyBalance > 0) return TrendingUp;
+    if (financialSummary.monthlyBalance < 0) return TrendingDown;
+    return TrendingUp;
+  };
+
+  const BalanceIcon = getBalanceIcon();
 
   return (
     <AdminLayout>
@@ -22,48 +41,68 @@ export default function Finance() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
+          <Card className="border-blue-200 bg-blue-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-blue-800">
                 Saldo do Mês
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R$ 12.450,00</div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                +20.1% em relação ao mês anterior
+              <div className="text-2xl font-bold text-blue-800">
+                {loadingSummary 
+                  ? "Carregando..." 
+                  : formatCurrency(financialSummary?.monthlyBalance || 0)
+                }
+              </div>
+              <p className={`text-xs mt-1 flex items-center ${getBalanceVariant()}`}>
+                <BalanceIcon className="h-4 w-4 mr-1" />
+                {financialSummary?.monthlyBalance === 0 
+                  ? "Neutro este mês"
+                  : financialSummary && financialSummary.monthlyBalance > 0
+                    ? "Lucro este mês"
+                    : "Prejuízo este mês"
+                }
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-green-200 bg-green-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-green-800">
                 Receitas
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R$ 28.650,00</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                88 pedidos este mês
+              <div className="text-2xl font-bold text-green-800">
+                {loadingSummary 
+                  ? "Carregando..." 
+                  : formatCurrency(financialSummary?.totalRevenue || 0)
+                }
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                {financialSummary?.ordersCount || 0} pedidos este mês
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-red-200 bg-red-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-red-800">
                 Despesas
               </CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              <TrendingDown className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R$ 16.200,00</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                32 despesas este mês
+              <div className="text-2xl font-bold text-red-800">
+                {loadingSummary 
+                  ? "Carregando..." 
+                  : formatCurrency(financialSummary?.totalExpenses || 0)
+                }
+              </div>
+              <p className="text-xs text-red-600 mt-1">
+                {financialSummary?.expensesCount || 0} despesas este mês
               </p>
             </CardContent>
           </Card>
@@ -71,26 +110,28 @@ export default function Finance() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="income">Receitas</TabsTrigger>
+            <TabsTrigger value="revenues">Receitas</TabsTrigger>
             <TabsTrigger value="expenses">Despesas</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="suppliers">Fornecedores</TabsTrigger>
+            {(activeTab === "suppliers" || activeTab === "supply-orders") && (
+              <TabsTrigger value="supply-orders">/ Pedidos & Entregas</TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <FinancialReports />
-          </TabsContent>
-
-          <TabsContent value="income" className="space-y-4">
-            <IncomeList />
+          <TabsContent value="revenues" className="space-y-4">
+            <RevenueChart />
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
-            <ExpenseList />
+            <ExpenseManagement />
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-4">
-            <FinancialReports />
+          <TabsContent value="suppliers" className="space-y-4">
+            <SupplyOrderManagement activeTab="suppliers" />
+          </TabsContent>
+
+          <TabsContent value="supply-orders" className="space-y-4">
+            <SupplyOrderManagement activeTab="orders" />
           </TabsContent>
         </Tabs>
       </div>

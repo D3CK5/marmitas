@@ -11,7 +11,9 @@ import {
   Menu,
   DollarSign,
   Truck,
-  Utensils
+  Utensils,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,84 +61,107 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-export function AdminLayout({ children }: AdminLayoutProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [expandedItems, setExpandedItems] = useState<string[]>(["Financeiro"]);
 
-  const handleLogout = () => {
-    // Implementar logout
-    navigate("/");
+  const toggleExpanded = (title: string) => {
+    setExpandedItems(prev => 
+      prev.includes(title) 
+        ? prev.filter(item => item !== title)
+        : [...prev, title]
+    );
   };
 
-  const SidebarContent = () => (
-    <>
-      <div className="space-y-4 py-4">
-        <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-lg font-semibold">Admin</h2>
-          <div className="space-y-1">
-            {sidebarItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
-                  location.pathname === item.href
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                <item.icon className="mr-2 h-4 w-4" />
-                {item.title}
-              </Link>
-            ))}
-          </div>
-        </div>
+  const handleLogout = () => {
+    localStorage.removeItem("supabase.auth.token");
+    navigate("/login");
+    onItemClick?.();
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+        <Link to="/" className="flex items-center gap-2 font-semibold">
+          <Utensils className="h-6 w-6" />
+          <span>Marmitas Admin</span>
+        </Link>
       </div>
+      <ScrollArea className="flex-1">
+        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+          <div className="space-y-2 py-4">
+            {sidebarItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              const isSubmenuActive = false;
+              const isExpanded = false;
+
+              return (
+                <div key={item.title}>
+                  <div className="flex items-center">
+                    <Link
+                      to={item.href}
+                      className={cn(
+                        "flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                        (isActive || isSubmenuActive) && "bg-muted text-primary"
+                      )}
+                      onClick={onItemClick}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.title}
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+      </ScrollArea>
       <div className="mt-auto p-4">
-        <Button
+        <Button 
+          variant="outline" 
+          size="sm" 
           onClick={handleLogout}
-          variant="ghost"
-          className="w-full justify-start"
+          className="w-full"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sair
         </Button>
       </div>
-    </>
+    </div>
   );
+}
+
+export function AdminLayout({ children }: AdminLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <ScrollArea className="flex flex-col h-full border-r">
-          <SidebarContent />
-        </ScrollArea>
-      </aside>
-
-      {/* Mobile Sidebar */}
-      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            className="lg:hidden fixed left-4 top-4 z-40"
-            size="icon"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <ScrollArea className="h-full">
-            <SidebarContent />
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Main Content */}
-      <main className="flex-1 lg:pl-64">
-        <div className="px-4 py-6 lg:px-8">{children}</div>
-      </main>
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-muted/40 md:block">
+        <SidebarContent />
+      </div>
+      <div className="flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col p-0">
+              <SidebarContent onItemClick={() => setSidebarOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        </header>
+        <main className="flex-1 space-y-4 p-4 md:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

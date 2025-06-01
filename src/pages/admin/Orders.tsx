@@ -155,7 +155,7 @@ export default function Orders() {
       description: `Tem certeza que deseja excluir permanentemente todos os ${deletedOrders.length} pedido(s) da lixeira? Esta ação não pode ser desfeita.`,
       onConfirm: () => {
         permanentDeleteOrders.mutateAsync(deletedOrders.map(o => o.id)).then(() => {
-          setIsTrashDialogOpen(false);
+        setIsTrashDialogOpen(false);
         });
       },
       variant: "destructive"
@@ -385,8 +385,8 @@ export default function Orders() {
                   </>
                 ) : (
                   <>
-                    <Trash className="mr-2 h-4 w-4" />
-                    Esvaziar Lixeira
+                <Trash className="mr-2 h-4 w-4" />
+                Esvaziar Lixeira
                   </>
                 )}
               </Button>
