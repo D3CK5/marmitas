@@ -80,12 +80,6 @@ export function OrderSuccess() {
                 <span className="font-medium">Forma de Pagamento</span>
                 <span>{order.payment_method === 'pix' ? 'PIX' : 'Cartão de Crédito'}</span>
               </div>
-              {order.payment_method === 'credit_card' && order.payment_details.installments && (
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="font-medium">Parcelas</span>
-                  <span>{order.payment_details.installments}x</span>
-                </div>
-              )}
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="font-medium">Total</span>
                 <span className="font-bold">{formatCurrency(order.total)}</span>
