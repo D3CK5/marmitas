@@ -23,6 +23,7 @@ import Products from "./pages/admin/Products";
 import Orders from "./pages/admin/Orders";
 import Finance from "./pages/admin/Finance";
 import Customers from "./pages/admin/Customers";
+import Analytics from "./pages/admin/Analytics";
 import DeliveryAreas from "./pages/admin/DeliveryAreas";
 import Settings from "./pages/admin/Settings";
 import AdminLogin from "./pages/admin/Login";
@@ -72,6 +73,7 @@ const App = () => {
                 <Route path="/admin/pedidos" element={<AdminRoute><Orders /></AdminRoute>} />
                 <Route path="/admin/financeiro" element={<AdminRoute><Finance /></AdminRoute>} />
                 <Route path="/admin/clientes" element={<AdminRoute><Customers /></AdminRoute>} />
+                <Route path="/admin/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
                 <Route path="/admin/areas-entrega" element={<AdminRoute><DeliveryAreas /></AdminRoute>} />
                 <Route path="/admin/configuracoes" element={<AdminRoute><Settings /></AdminRoute>} />
                 <Route path="/admin/categorias" element={<AdminRoute><Categories /></AdminRoute>} />

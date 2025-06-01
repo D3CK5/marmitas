@@ -13,7 +13,8 @@ import {
   Truck,
   Utensils,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +40,11 @@ const sidebarItems = [
     title: "Clientes",
     icon: Users,
     href: "/admin/clientes",
+  },
+  {
+    title: "Analytics",
+    icon: BarChart3,
+    href: "/admin/analytics",
   },
   {
     title: "Financeiro",
