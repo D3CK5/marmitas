@@ -39,36 +39,36 @@ export default function Dashboard() {
   // Buscar dados do gráfico baseado no período selecionado
   const { data: chartData, isLoading: loadingChart } = getChartData(chartPeriod);
 
-  const statsCards = [
-    {
-      title: "Vendas Hoje",
+const statsCards = [
+  {
+    title: "Vendas Hoje",
       value: loadingStats ? "..." : formatPrice(dashboardStats?.salesToday || 0),
       description: "Total de vendas realizadas hoje",
-      icon: DollarSign,
+    icon: DollarSign,
       trend: "neutral" as const,
-    },
-    {
-      title: "Pedidos Hoje",
+  },
+  {
+    title: "Pedidos Hoje",
       value: loadingStats ? "..." : dashboardStats?.ordersToday?.toString() || "0",
       description: "Quantidade de pedidos feitos hoje",
-      icon: ShoppingCart,
+    icon: ShoppingCart,
       trend: "neutral" as const,
-    },
-    {
-      title: "Ticket Médio",
+  },
+  {
+    title: "Ticket Médio",
       value: loadingStats ? "..." : formatPrice(dashboardStats?.avgTicket || 0),
       description: "Valor médio por pedido hoje",
-      icon: Package,
+    icon: Package,
       trend: "neutral" as const,
-    },
-    {
+  },
+  {
       title: "Checkout Abandonado",
       value: loadingStats ? "..." : dashboardStats?.abandonedCarts?.toString() || "0",
       description: "Abandonos do mês não recuperados",
       icon: ShoppingBag,
       trend: "neutral" as const,
-    },
-  ];
+  },
+];
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -149,36 +149,36 @@ export default function Dashboard() {
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <XAxis
+                  <XAxis
                       dataKey="date"
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `R$ ${value}`}
-                    />
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `R$ ${value}`}
+                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <Tooltip
                       formatter={(value: number) => [formatPrice(value), 'Vendas']}
                       labelFormatter={(label) => `Data: ${label}`}
                     />
-                    <Line
-                      type="monotone"
-                      dataKey="vendas"
-                      stroke="#8884d8"
-                      strokeWidth={2}
+                  <Line
+                    type="monotone"
+                    dataKey="vendas"
+                    stroke="#8884d8"
+                    strokeWidth={2}
                       dot={{ fill: '#8884d8' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                  />
+                </LineChart>
+              </ResponsiveContainer>
               )}
             </div>
           </CardContent>
@@ -195,17 +195,17 @@ export default function Dashboard() {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : recentOrders && recentOrders.length > 0 ? (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {recentOrders.map((order) => (
-                    <div
+                  <div
                       key={order.id}
-                      className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                    >
-                      <div>
+                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <div>
                         <p className="font-medium">Pedido #{order.id}</p>
-                        <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                           {order.user.full_name} - {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
-                        </p>
+                      </p>
                         <div className="text-xs text-muted-foreground mt-1">
                           {order.items.slice(0, 2).map((item, index) => (
                             <span key={item.id}>
@@ -215,16 +215,16 @@ export default function Dashboard() {
                           ))}
                           {order.items.length > 2 && ` +${order.items.length - 2} mais`}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatPrice(order.total)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatTime(order.created_at)}
-                        </p>
-                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="text-right">
+                        <p className="font-medium">{formatPrice(order.total)}</p>
+                      <p className="text-sm text-muted-foreground">
+                          {formatTime(order.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   Nenhum pedido encontrado
@@ -243,13 +243,13 @@ export default function Dashboard() {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : topProducts && topProducts.length > 0 ? (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {topProducts.map((product, index) => (
-                    <div
+                  <div
                       key={product.product_id}
-                      className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                    >
-                      <div className="flex items-center gap-4">
+                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-secondary rounded-lg overflow-hidden flex items-center justify-center">
                           {product.image_url ? (
                             <img
@@ -272,17 +272,17 @@ export default function Dashboard() {
                             </span>
                           )}
                         </div>
-                        <div>
+                      <div>
                           <p className="font-medium">{product.product_title}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                             {product.quantity_sold} vendas este mês
-                          </p>
+                        </p>
                         </div>
                       </div>
                       <p className="font-medium">{formatPrice(product.avg_price)}</p>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   Nenhum produto vendido este mês

@@ -18,6 +18,8 @@ export interface ProductAnalytics {
   total_quantity: number;
   total_revenue: number;
   conversion_rate: number;
+  views: number;
+  cart_additions: number;
 }
 
 export interface FoodChange {
@@ -117,10 +119,10 @@ export function useAnalytics(period: string = "30d") {
             recovered_at
           `)
           .not('abandoned_at', 'is', null)
-          .not('payment_method_selected_at', 'is', null)
           .is('recovered_at', null)
           .gte('abandoned_at', startDate.toISOString())
-          .order('abandoned_at', { ascending: false });
+          .order('abandoned_at', { ascending: false })
+          .limit(20);
 
         if (error) throw error;
 
@@ -159,60 +161,67 @@ export function useAnalytics(period: string = "30d") {
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
-  // 2. Análise de Produtos
+  // 2. Análise de Produtos (usando dados reais)
   const { data: productAnalytics, isLoading: loadingProducts } = useQuery({
     queryKey: ["product-analytics", period],
     queryFn: async (): Promise<ProductAnalytics[]> => {
       try {
         const { startDate } = getPeriodDates(period);
 
-        // Buscar vendas de produtos no período
-        const { data: orderItems, error } = await supabase
-          .from('order_items')
+        // Buscar dados de analytics de produtos
+        const { data: analytics, error } = await supabase
+          .from('product_analytics')
           .select(`
             product_id,
-            quantity,
-            price,
-            order:orders!inner(created_at, status)
+            views,
+            unique_views,
+            cart_additions,
+            purchases,
+            revenue,
+            conversion_rate,
+            date
           `)
-          .gte('order.created_at', startDate.toISOString())
-          .eq('order.status', 'completed')
-          .is('order.deleted_at', null);
+          .gte('date', startDate.toISOString().split('T')[0])
+          .order('date', { ascending: false });
 
         if (error) throw error;
 
+        // Buscar nomes dos produtos
+        const productIds = [...new Set(analytics?.map(a => a.product_id) || [])];
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, title')
+          .in('id', productIds);
+
         // Agrupar por produto
         const productMap = new Map();
-        orderItems?.forEach(item => {
+        analytics?.forEach(item => {
           if (!productMap.has(item.product_id)) {
             productMap.set(item.product_id, {
               product_id: item.product_id,
               total_quantity: 0,
               total_revenue: 0,
+              total_views: 0,
+              total_cart_additions: 0,
               monthly_data: new Map()
             });
           }
           
           const product = productMap.get(item.product_id);
-          product.total_quantity += item.quantity;
-          product.total_revenue += item.quantity * Number(item.price);
+          product.total_quantity += item.purchases;
+          product.total_revenue += Number(item.revenue);
+          product.total_views += item.views;
+          product.total_cart_additions += item.cart_additions;
           
           // Agrupar por mês
-          const month = new Date(item.order.created_at).toISOString().substring(0, 7);
+          const month = item.date.substring(0, 7);
           if (!product.monthly_data.has(month)) {
             product.monthly_data.set(month, { quantity: 0, revenue: 0 });
           }
           const monthData = product.monthly_data.get(month);
-          monthData.quantity += item.quantity;
-          monthData.revenue += item.quantity * Number(item.price);
+          monthData.quantity += item.purchases;
+          monthData.revenue += Number(item.revenue);
         });
-
-        // Buscar nomes dos produtos
-        const productIds = Array.from(productMap.keys());
-        const { data: products } = await supabase
-          .from('products')
-          .select('id, title')
-          .in('id', productIds);
 
         return Array.from(productMap.values()).map(product => {
           const productInfo = products?.find(p => p.id === product.product_id);
@@ -222,7 +231,9 @@ export function useAnalytics(period: string = "30d") {
             product_title: productInfo?.title || 'Produto',
             total_quantity: product.total_quantity,
             total_revenue: product.total_revenue,
-            conversion_rate: Math.random() * 20 + 5, // Mock - implementar cálculo real
+            views: product.total_views,
+            cart_additions: product.total_cart_additions,
+            conversion_rate: product.total_views > 0 ? (product.total_quantity / product.total_views) * 100 : 0,
             monthly_sales: Array.from(product.monthly_data.entries()).map(([month, data]) => ({
               month,
               quantity: data.quantity,
@@ -238,52 +249,51 @@ export function useAnalytics(period: string = "30d") {
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 
-  // 3. Análise de Trocas de Alimentos
-  const { data: foodChanges, isLoading: loadingFoodChanges } = useQuery({
-    queryKey: ["food-changes", period],
-    queryFn: async (): Promise<FoodChange[]> => {
-      try {
-        // Mock data - implementar quando sistema de trocas estiver completo
-        return [
-          { original_food: "Arroz Branco", changed_food: "Arroz Integral", change_count: 45, percentage: 23.5 },
-          { original_food: "Feijão Preto", changed_food: "Feijão Carioca", change_count: 32, percentage: 16.7 },
-          { original_food: "Carne Bovina", changed_food: "Frango Grelhado", change_count: 28, percentage: 14.6 },
-          { original_food: "Batata Frita", changed_food: "Batata Doce", change_count: 25, percentage: 13.0 },
-        ];
-      } catch (error) {
-        console.error('Erro ao buscar trocas de alimentos:', error);
-        return [];
-      }
-    },
-    staleTime: 1000 * 60 * 15, // 15 minutos
-  });
-
-  // 4. Análise de Páginas (Mock - implementar com tabela real)
+  // 3. Análise de Páginas (usando dados reais)
   const { data: pageAnalytics, isLoading: loadingPages } = useQuery({
     queryKey: ["page-analytics", period],
     queryFn: async (): Promise<PageAnalytics[]> => {
       try {
-        // Mock data - implementar quando tabela page_views estiver criada
-        return [
-          {
-            page_path: "/produto/marmita-fitness",
-            page_title: "Marmita Fitness",
-            total_views: 1250,
-            unique_visitors: 890,
-            avg_time_on_page: 180,
-            bounce_rate: 0.25,
-            conversion_rate: 0.124
-          },
-          {
-            page_path: "/produto/marmita-tradicional",
-            page_title: "Marmita Tradicional",
-            total_views: 980,
-            unique_visitors: 720,
-            avg_time_on_page: 165,
-            bounce_rate: 0.30,
-            conversion_rate: 0.087
+        const { startDate } = getPeriodDates(period);
+
+        const { data: pageViews, error } = await supabase
+          .from('page_views')
+          .select('page_path, page_title, session_id, timestamp')
+          .gte('timestamp', startDate.toISOString())
+          .order('timestamp', { ascending: false });
+
+        if (error) throw error;
+
+        // Agrupar por página
+        const pageMap = new Map();
+        pageViews?.forEach(view => {
+          const key = view.page_path;
+          if (!pageMap.has(key)) {
+            pageMap.set(key, {
+              page_path: view.page_path,
+              page_title: view.page_title,
+              total_views: 0,
+              unique_sessions: new Set(),
+              timestamps: []
+            });
           }
-        ];
+          
+          const page = pageMap.get(key);
+          page.total_views += 1;
+          page.unique_sessions.add(view.session_id);
+          page.timestamps.push(new Date(view.timestamp));
+        });
+
+        // Calcular métricas
+        return Array.from(pageMap.values()).map(page => ({
+          page_path: page.page_path,
+          page_title: page.page_title,
+          total_views: page.total_views,
+          unique_visitors: page.unique_sessions.size,
+          avg_time_on_page: 180, // Mock - calcular com eventos de time_on_page
+          bounce_rate: 0.25, // Mock - calcular baseado em sessões
+          conversion_rate: 0.15 // Mock - calcular baseado em conversões
+        }));
       } catch (error) {
         console.error('Erro ao buscar análise de páginas:', error);
         return [];
@@ -292,24 +302,51 @@ export function useAnalytics(period: string = "30d") {
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 
-  // 5. Análise Comportamental
+  // 4. Análise Comportamental (usando dados reais)
   const { data: behaviorAnalytics, isLoading: loadingBehavior } = useQuery({
     queryKey: ["behavior-analytics", period],
     queryFn: async (): Promise<BehaviorAnalytics> => {
       try {
         const { startDate } = getPeriodDates(period);
 
-        // Buscar horários de pico baseados em pedidos
-        const { data: orders, error } = await supabase
+        // Buscar dados de sessões
+        const { data: sessions, error } = await supabase
+          .from('analytics_sessions')
+          .select('*')
+          .gte('started_at', startDate.toISOString())
+          .order('started_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Calcular métricas comportamentais
+        const deviceMap = new Map();
+        const sourceMap = new Map();
+        let totalDuration = 0;
+        let totalPages = 0;
+
+        sessions?.forEach(session => {
+          // Dispositivos
+          deviceMap.set(session.device_type, (deviceMap.get(session.device_type) || 0) + 1);
+          
+          // Fontes de tráfego
+          const source = session.utm_source || 'direct';
+          sourceMap.set(source, (sourceMap.get(source) || 0) + 1);
+          
+          // Duração e páginas
+          totalDuration += session.duration_seconds || 0;
+          totalPages += session.pages_visited || 0;
+        });
+
+        const totalSessions = sessions?.length || 1;
+
+        // Horários de pico baseados em pedidos
+        const { data: orders } = await supabase
           .from('orders')
           .select('created_at')
           .gte('created_at', startDate.toISOString())
           .eq('status', 'completed')
           .is('deleted_at', null);
 
-        if (error) throw error;
-
-        // Agrupar por hora
         const hourMap = new Map();
         orders?.forEach(order => {
           const hour = new Date(order.created_at).getHours();
@@ -320,23 +357,22 @@ export function useAnalytics(period: string = "30d") {
         const peak_hours = Array.from(hourMap.entries())
           .map(([hour, count]) => ({ hour, order_count: count }))
           .sort((a, b) => b.order_count - a.order_count)
-          .slice(0, 6);
+          .slice(0, 8);
 
         return {
           peak_hours,
-          avg_session_duration: 272, // Mock - implementar com tracking real
-          pages_per_session: 3.4, // Mock
-          device_breakdown: [
-            { device: "Mobile", count: 720, percentage: 65 },
-            { device: "Desktop", count: 280, percentage: 25 },
-            { device: "Tablet", count: 110, percentage: 10 }
-          ],
-          traffic_sources: [
-            { source: "Direto", count: 450, percentage: 40 },
-            { source: "Google", count: 340, percentage: 30 },
-            { source: "Instagram", count: 230, percentage: 20 },
-            { source: "Facebook", count: 110, percentage: 10 }
-          ]
+          avg_session_duration: Math.round(totalDuration / totalSessions),
+          pages_per_session: Math.round((totalPages / totalSessions) * 10) / 10,
+          device_breakdown: Array.from(deviceMap.entries()).map(([device, count]) => ({
+            device: device.charAt(0).toUpperCase() + device.slice(1),
+            count,
+            percentage: Math.round((count / totalSessions) * 100)
+          })),
+          traffic_sources: Array.from(sourceMap.entries()).map(([source, count]) => ({
+            source: source.charAt(0).toUpperCase() + source.slice(1),
+            count,
+            percentage: Math.round((count / totalSessions) * 100)
+          }))
         };
       } catch (error) {
         console.error('Erro ao buscar análise comportamental:', error);
@@ -352,50 +388,101 @@ export function useAnalytics(period: string = "30d") {
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 
-  // 6. Análise Geográfica
+  // 5. Análise Geográfica (usando dados reais)
   const { data: geographicAnalytics, isLoading: loadingGeographic } = useQuery({
     queryKey: ["geographic-analytics", period],
     queryFn: async (): Promise<GeographicAnalytics[]> => {
       try {
         const { startDate } = getPeriodDates(period);
 
-        const { data: orders, error } = await supabase
+        // Buscar pedidos por endereço (focando em bairros)
+        const { data: orders, error: orderError } = await supabase
           .from('orders')
           .select(`
             total,
             status,
-            address:user_addresses!inner(neighborhood, city)
+            created_at,
+            address:user_addresses!inner(neighborhood, city, state)
           `)
           .gte('created_at', startDate.toISOString())
           .eq('status', 'completed')
           .is('deleted_at', null);
 
-        if (error) throw error;
+        if (orderError) throw orderError;
 
         // Agrupar por bairro
-        const regionMap = new Map();
+        const neighborhoodMap = new Map();
+        
         orders?.forEach(order => {
-          const region = order.address.neighborhood || order.address.city;
-          if (!regionMap.has(region)) {
-            regionMap.set(region, {
-              region,
+          const neighborhood = order.address.neighborhood;
+          const city = order.address.city;
+          const regionKey = `${neighborhood} - ${city}`;
+          
+          if (!neighborhoodMap.has(regionKey)) {
+            neighborhoodMap.set(regionKey, {
+              region: regionKey,
               order_count: 0,
               revenue: 0,
-              delivery_success_rate: 0.95 // Mock
+              delivery_success_rate: 0.95 // Mock - implementar baseado em status de entrega
             });
           }
           
-          const regionData = regionMap.get(region);
+          const regionData = neighborhoodMap.get(regionKey);
           regionData.order_count += 1;
           regionData.revenue += Number(order.total);
         });
 
-        return Array.from(regionMap.values()).map(region => ({
-          ...region,
-          avg_order_value: region.revenue / region.order_count
-        }));
+        // Buscar dados de sessões por região (manter para completar dados)
+        const { data: sessions, error } = await supabase
+          .from('analytics_sessions')
+          .select('region')
+          .gte('started_at', startDate.toISOString())
+          .not('region', 'is', null);
+
+        if (error) throw error;
+
+        // Adicionar regiões que aparecem nas sessões mas não têm pedidos
+        sessions?.forEach(session => {
+          if (!neighborhoodMap.has(session.region)) {
+            neighborhoodMap.set(session.region, {
+              region: session.region,
+              order_count: 0,
+              revenue: 0,
+              delivery_success_rate: 0.95
+            });
+          }
+        });
+
+        return Array.from(neighborhoodMap.values())
+          .map(region => ({
+            ...region,
+            avg_order_value: region.order_count > 0 ? region.revenue / region.order_count : 0
+          }))
+          .sort((a, b) => b.order_count - a.order_count) // Ordenar por quantidade de pedidos
+          .slice(0, 10); // Top 10 bairros
       } catch (error) {
         console.error('Erro ao buscar análise geográfica:', error);
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 15, // 15 minutos
+  });
+
+  // 6. Análise de Trocas de Alimentos (mock data por enquanto)
+  const { data: foodChanges, isLoading: loadingFoodChanges } = useQuery({
+    queryKey: ["food-changes", period],
+    queryFn: async (): Promise<FoodChange[]> => {
+      try {
+        // Mock data - implementar quando sistema de trocas estiver completo
+        return [
+          { original_food: "Arroz Branco", changed_food: "Arroz Integral", change_count: 45, percentage: 23.5 },
+          { original_food: "Feijão Preto", changed_food: "Feijão Carioca", change_count: 32, percentage: 16.7 },
+          { original_food: "Carne Bovina", changed_food: "Frango Grelhado", change_count: 28, percentage: 14.6 },
+          { original_food: "Batata Frita", changed_food: "Batata Doce", change_count: 25, percentage: 13.0 },
+          { original_food: "Refrigerante", changed_food: "Suco Natural", change_count: 22, percentage: 11.5 },
+        ];
+      } catch (error) {
+        console.error('Erro ao buscar trocas de alimentos:', error);
         return [];
       }
     },

@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "sonner";
 
 import { CartProvider } from "./contexts/CartContext";
 import { CartDrawer } from "./components/CartDrawer";
+import { TrackingProvider } from "./components/TrackingProvider";
 
 import Index from "./pages/Index";
 import Product from "./pages/Product";
@@ -47,46 +48,48 @@ const App = () => {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
-            <CartProvider>
-              <Sonner />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/produto/:id" element={<Product />} />
-                <Route path="/checkout" element={<PrivateRoute> <Checkout /> </PrivateRoute>} />
-                <Route path="/pedido-realizado" element={<OrderSuccess />} />
-                
-                {/* Rotas da área do cliente */}
-                <Route path="/minhaconta" element={<AccountLayout />}>
-                  <Route index element={<AccountHome />} />
-                  <Route path="dados" element={<AccountProfile />} />
-                  <Route path="pedidos" element={<AccountOrders />} />
-                  <Route path="enderecos" element={<AccountAddresses />} />
-                </Route>
-                <Route path="/minhaconta/login" element={<AccountAuth />} />
-                
-                {/* Rota de login admin */}
-                <Route path="/admin/login" element={<AdminLogin />} />
-                
-                {/* Rotas protegidas do admin */}
-                <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
-                <Route path="/admin/produtos" element={<AdminRoute><Products /></AdminRoute>} />
-                <Route path="/admin/pedidos" element={<AdminRoute><Orders /></AdminRoute>} />
-                <Route path="/admin/financeiro" element={<AdminRoute><Finance /></AdminRoute>} />
-                <Route path="/admin/clientes" element={<AdminRoute><Customers /></AdminRoute>} />
-                <Route path="/admin/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
-                <Route path="/admin/areas-entrega" element={<AdminRoute><DeliveryAreas /></AdminRoute>} />
-                <Route path="/admin/configuracoes" element={<AdminRoute><Settings /></AdminRoute>} />
-                <Route path="/admin/categorias" element={<AdminRoute><Categories /></AdminRoute>} />
-                <Route path="/admin/lixeira" element={<AdminRoute><Trash /></AdminRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <CartDrawer />
-              <AuthModal 
-                isOpen={isOpen} 
-                onClose={closeAuthModal}
-                defaultTab={defaultTab}
-              />
-            </CartProvider>
+            <TrackingProvider>
+              <CartProvider>
+                <Sonner />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/produto/:id" element={<Product />} />
+                  <Route path="/checkout" element={<PrivateRoute> <Checkout /> </PrivateRoute>} />
+                  <Route path="/pedido-realizado" element={<OrderSuccess />} />
+                  
+                  {/* Rotas da área do cliente */}
+                  <Route path="/minhaconta" element={<AccountLayout />}>
+                    <Route index element={<AccountHome />} />
+                    <Route path="dados" element={<AccountProfile />} />
+                    <Route path="pedidos" element={<AccountOrders />} />
+                    <Route path="enderecos" element={<AccountAddresses />} />
+                  </Route>
+                  <Route path="/minhaconta/login" element={<AccountAuth />} />
+                  
+                  {/* Rota de login admin */}
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  
+                  {/* Rotas protegidas do admin */}
+                  <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
+                  <Route path="/admin/produtos" element={<AdminRoute><Products /></AdminRoute>} />
+                  <Route path="/admin/pedidos" element={<AdminRoute><Orders /></AdminRoute>} />
+                  <Route path="/admin/financeiro" element={<AdminRoute><Finance /></AdminRoute>} />
+                  <Route path="/admin/clientes" element={<AdminRoute><Customers /></AdminRoute>} />
+                  <Route path="/admin/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
+                  <Route path="/admin/areas-entrega" element={<AdminRoute><DeliveryAreas /></AdminRoute>} />
+                  <Route path="/admin/configuracoes" element={<AdminRoute><Settings /></AdminRoute>} />
+                  <Route path="/admin/categorias" element={<AdminRoute><Categories /></AdminRoute>} />
+                  <Route path="/admin/lixeira" element={<AdminRoute><Trash /></AdminRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <CartDrawer />
+                <AuthModal 
+                  isOpen={isOpen} 
+                  onClose={closeAuthModal}
+                  defaultTab={defaultTab}
+                />
+              </CartProvider>
+            </TrackingProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

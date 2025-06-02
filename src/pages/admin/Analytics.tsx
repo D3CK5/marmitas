@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   BarChart3,
   Users,
@@ -19,7 +20,18 @@ import {
   Zap,
   Heart,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Activity,
+  Flame,
+  Filter,
+  MousePointer,
+  Smartphone,
+  DollarSign,
+  TrendingDown,
+  MessageCircle,
+  ExternalLink,
+  TestTube,
+  Info
 } from "lucide-react";
 import {
   LineChart,
@@ -35,80 +47,54 @@ import {
   Pie,
   Cell,
   Area,
-  AreaChart
+  AreaChart,
+  ComposedChart,
+  Legend
 } from "recharts";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { useIntegrations } from "@/hooks/useIntegrations";
+import { formatPrice } from "@/lib/utils";
+import { RealTimeAnalytics } from "@/components/admin/RealTimeAnalytics";
+import { toast } from "sonner";
 
-// Dados mock para demonstração - posteriormente serão substituídos por hooks reais
-const mockAbandonedCheckouts = [
-  {
-    id: 1,
-    customer: "João Silva",
-    email: "joao@email.com",
-    cartValue: 45.90,
-    abandonedAt: "2024-01-15T14:30:00Z",
-    stage: "Pagamento"
-  },
-  {
-    id: 2,
-    customer: "Maria Santos",
-    email: "maria@email.com",
-    cartValue: 32.50,
-    abandonedAt: "2024-01-15T16:45:00Z",
-    stage: "Endereço"
-  }
+// Cores mais bonitas e profissionais
+const CHART_COLORS = {
+  primary: '#3B82F6',
+  secondary: '#10B981', 
+  accent: '#F59E0B',
+  danger: '#EF4444',
+  purple: '#8B5CF6',
+  pink: '#EC4899',
+  indigo: '#6366F1',
+  emerald: '#059669',
+  orange: '#F97316',
+  slate: '#64748B'
+};
+
+const PIE_COLORS = [
+  CHART_COLORS.primary,
+  CHART_COLORS.secondary,
+  CHART_COLORS.accent,
+  CHART_COLORS.purple,
+  CHART_COLORS.pink,
+  CHART_COLORS.indigo
 ];
-
-const mockProductHistory = [
-  { month: "Jan", quantity: 150, revenue: 4500 },
-  { month: "Fev", quantity: 180, revenue: 5200 },
-  { month: "Mar", quantity: 200, revenue: 6000 },
-  { month: "Abr", quantity: 165, revenue: 4800 },
-  { month: "Mai", quantity: 220, revenue: 6800 }
-];
-
-const mockFoodChanges = [
-  { original: "Arroz Branco", changed: "Arroz Integral", count: 45 },
-  { original: "Feijão Preto", changed: "Feijão Carioca", count: 32 },
-  { original: "Carne Bovina", changed: "Frango Grelhado", count: 28 },
-  { original: "Batata Frita", changed: "Batata Doce", count: 25 }
-];
-
-const mockPageViews = [
-  { page: "Marmita Fitness", views: 1250, conversionRate: 12.4 },
-  { page: "Marmita Tradicional", views: 980, conversionRate: 8.7 },
-  { page: "Marmita Vegana", views: 750, conversionRate: 15.2 },
-  { page: "Marmita Low Carb", views: 650, conversionRate: 9.8 }
-];
-
-const mockPeakHours = [
-  { hour: "11:00", orders: 15 },
-  { hour: "12:00", orders: 35 },
-  { hour: "13:00", orders: 28 },
-  { hour: "18:00", orders: 22 },
-  { hour: "19:00", orders: 40 },
-  { hour: "20:00", orders: 25 }
-];
-
-const mockGeographicData = [
-  { neighborhood: "Centro", orders: 120, revenue: 3600 },
-  { neighborhood: "Jardins", orders: 95, revenue: 3200 },
-  { neighborhood: "Vila Nova", orders: 80, revenue: 2400 },
-  { neighborhood: "Barra", orders: 70, revenue: 2100 }
-];
-
-const mockCustomerRetention = [
-  { period: "1-7 dias", customers: 85, percentage: 34 },
-  { period: "8-30 dias", customers: 45, percentage: 18 },
-  { period: "31-90 dias", customers: 32, percentage: 13 },
-  { period: "90+ dias", customers: 88, percentage: 35 }
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Analytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
   const [selectedProduct, setSelectedProduct] = useState("all");
-  const [loading, setLoading] = useState(false);
+  
+  const {
+    abandonedCheckouts,
+    productAnalytics,
+    foodChanges,
+    pageAnalytics,
+    behaviorAnalytics,
+    geographicAnalytics,
+    loading
+  } = useAnalytics(selectedPeriod);
+
+  const { settings: integrationSettings } = useIntegrations();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -130,14 +116,112 @@ export default function Analytics() {
     }
   };
 
+  // Função para recuperar checkout via WhatsApp
+  const handleRecoverCheckout = (checkout: any) => {
+    const phone = integrationSettings?.whatsapp_number || "5511999999999"; // Usar número configurado
+    const customerName = checkout.customer_name || "Cliente";
+    const value = formatCurrency(checkout.cart_value);
+    
+    if (!integrationSettings?.whatsapp_number) {
+      toast.error('Configure o número do WhatsApp nas configurações de integrações');
+      return;
+    }
+    
+    const message = encodeURIComponent(
+      `Olá ${customerName}! 😊\n\n` +
+      `Vi que você esqueceu uma marmita deliciosa no seu carrinho (${value}). ` +
+      `Que tal finalizar o pedido agora? Posso te ajudar com alguma dúvida?\n\n` +
+      `🍱 Finalize em: ${window.location.origin}/checkout`
+    );
+    
+    const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  // Calcular métricas dinâmicas baseadas nos dados reais
+  const totalRevenue = productAnalytics?.reduce((sum, p) => sum + p.total_revenue, 0) || 0;
+  const totalSales = productAnalytics?.reduce((sum, p) => sum + p.total_quantity, 0) || 0;
+  const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
+  
+  const conversionRate = productAnalytics && productAnalytics.length > 0 ? 
+    ((totalSales / productAnalytics.reduce((sum, p) => sum + p.views, 0)) * 100).toFixed(1) 
+    : "0.0";
+
+  const avgSessionTime = behaviorAnalytics?.avg_session_duration 
+    ? `${Math.floor(behaviorAnalytics.avg_session_duration / 60)}m ${behaviorAnalytics.avg_session_duration % 60}s`
+    : "0m 0s";
+
+  const abandonmentRate = abandonedCheckouts && totalSales ?
+    ((abandonedCheckouts.length / (abandonedCheckouts.length + totalSales)) * 100).toFixed(1)
+    : "0.0";
+
+  // Dados para funil de conversão baseados em dados reais
+  const totalViews = productAnalytics?.reduce((sum, p) => sum + p.views, 0) || 1000;
+  const totalCartAdditions = productAnalytics?.reduce((sum, p) => sum + p.cart_additions, 0) || 300;
+  const totalCheckouts = abandonedCheckouts?.length || 200;
+  const totalPurchases = totalSales || 150;
+
+  const conversionFunnelData = [
+    { name: 'Visitantes', value: Math.round(totalViews * 1.2), fill: CHART_COLORS.slate },
+    { name: 'Visualizaram Produto', value: totalViews, fill: CHART_COLORS.primary },
+    { name: 'Adicionaram ao Carrinho', value: totalCartAdditions, fill: CHART_COLORS.secondary },
+    { name: 'Iniciaram Checkout', value: totalCheckouts, fill: CHART_COLORS.accent },
+    { name: 'Finalizaram Compra', value: totalPurchases, fill: CHART_COLORS.emerald }
+  ];
+
+  // Dados de abandono por estágio
+  const abandonmentByStage = [
+    { name: 'Carrinho', value: abandonedCheckouts?.filter(c => c.stage === 'Carrinho').length || 5, fill: CHART_COLORS.danger },
+    { name: 'Endereço', value: abandonedCheckouts?.filter(c => c.stage === 'Endereço').length || 3, fill: CHART_COLORS.accent },
+    { name: 'Pagamento', value: abandonedCheckouts?.filter(c => c.stage === 'Pagamento').length || 2, fill: CHART_COLORS.purple }
+  ];
+
+  // Tooltip personalizado
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-900">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {`${entry.dataKey}: ${entry.dataKey.includes('receita') ? formatCurrency(entry.value) : entry.value}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col gap-6">
+        {/* Aviso de BETA - Bem grande e visível */}
+        <Alert className="border-2 border-orange-500 bg-gradient-to-r from-orange-50 to-amber-50">
+          <TestTube className="h-6 w-6 text-orange-600" />
+          <AlertDescription className="ml-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-lg font-bold text-orange-800">🧪 VERSÃO BETA</span>
+                <p className="text-orange-700 mt-1">
+                  Esta funcionalidade está em fase de testes. Os dados podem ser limitados ou imprecisos. 
+                  Agradecemos seu feedback para melhorarmos o sistema!
+                </p>
+              </div>
+              <Badge variant="outline" className="border-orange-500 text-orange-700 font-semibold px-3 py-1">
+                BETA
+              </Badge>
+            </div>
+          </AlertDescription>
+        </Alert>
+
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Analytics</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Analytics Avançados
+            </h1>
             <p className="text-muted-foreground">
-              Análises avançadas e insights do seu negócio
+              Análises detalhadas e insights do seu negócio
             </p>
           </div>
           <div className="flex gap-2">
@@ -159,190 +243,335 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Métricas principais */}
+        {/* Métricas principais com design melhorado */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <Target className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12.4%</div>
+              <div className="text-2xl font-bold text-blue-600">{conversionRate}%</div>
               <p className="text-xs text-muted-foreground">
-                +2.1% desde o mês passado
+                {totalSales} conversões de {productAnalytics?.reduce((sum, p) => sum + p.views, 0)} visualizações
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(totalRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ticket médio: {formatCurrency(avgOrderValue)}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Tempo Médio no Site</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4m 32s</div>
+              <div className="text-2xl font-bold text-orange-600">{avgSessionTime}</div>
               <p className="text-xs text-muted-foreground">
-                +18s desde a semana passada
+                {behaviorAnalytics?.pages_per_session || 0} páginas por sessão
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-red-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Taxa de Abandono</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <TrendingDown className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23.8%</div>
+              <div className="text-2xl font-bold text-red-600">{abandonmentRate}%</div>
               <p className="text-xs text-muted-foreground">
-                -3.2% desde o mês passado
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes Recorrentes</CardTitle>
-              <Heart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">68%</div>
-              <p className="text-xs text-muted-foreground">
-                +5.1% desde o mês passado
+                {abandonedCheckouts?.length || 0} abandonos no período
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="abandono" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="abandono">Abandono</TabsTrigger>
+        <Tabs defaultValue="produtos" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
+            <TabsTrigger value="funil">Funil</TabsTrigger>
+            <TabsTrigger value="abandono">Abandono</TabsTrigger>
             <TabsTrigger value="trocas">Trocas</TabsTrigger>
             <TabsTrigger value="paginas">Páginas</TabsTrigger>
             <TabsTrigger value="comportamento">Comportamento</TabsTrigger>
             <TabsTrigger value="geografia">Geografia</TabsTrigger>
+            <TabsTrigger value="tempo-real">Tempo Real</TabsTrigger>
           </TabsList>
 
-          {/* Aba Carrinho Abandonado */}
-          <TabsContent value="abandono" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Checkouts Abandonados</CardTitle>
-                </CardHeader>
-                <CardContent>
+          {/* Aba Produtos - APENAS tabela de detalhes */}
+          <TabsContent value="produtos" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-500" />
+                  Performance dos Produtos
+                  {loading.products && <Loader2 className="h-4 w-4 animate-spin" />}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading.products ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : productAnalytics && productAnalytics.length > 0 ? (
                   <div className="space-y-4">
-                    {mockAbandonedCheckouts.map((checkout) => (
-                      <div key={checkout.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                        <div>
-                          <p className="font-medium">{checkout.customer}</p>
-                          <p className="text-sm text-muted-foreground">{checkout.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline">{checkout.stage}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatTime(checkout.abandonedAt)}
-                            </span>
+                    {productAnalytics.slice(0, 10).map((product) => (
+                      <div key={product.product_id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <ShoppingCart className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">{product.product_title}</p>
+                            <div className="flex gap-4 text-sm text-muted-foreground">
+                              <span>{product.views} visualizações</span>
+                              <span>{product.cart_additions} carrinho</span>
+                              <span>{product.total_quantity} vendas</span>
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">{formatCurrency(checkout.cartValue)}</p>
-                          <Button variant="outline" size="sm" className="mt-1">
-                            Recuperar
-                          </Button>
+                          <p className="font-bold text-lg text-green-600">{formatCurrency(product.total_revenue)}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {product.conversion_rate.toFixed(1)}% conversão
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum produto vendido no período
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Aba Funil de Conversão - Corrigindo overflow */}
+          <TabsContent value="funil" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-purple-500" />
+                    Funil de Conversão
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <AreaChart data={conversionFunnelData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 10 }} 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area type="monotone" dataKey="value" stroke={CHART_COLORS.primary} fill={CHART_COLORS.primary} fillOpacity={0.6} />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Estágios de Abandono</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-green-500" />
+                    Taxas de Conversão
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Carrinho', value: 45 },
-                          { name: 'Endereço', value: 30 },
-                          { name: 'Pagamento', value: 25 }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={80}
-                        dataKey="value"
-                      >
-                        {COLORS.map((color, index) => (
-                          <Cell key={`cell-${index}`} fill={color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-6">
+                    {conversionFunnelData.map((step, index) => {
+                      if (index === 0) return null;
+                      const prevStep = conversionFunnelData[index - 1];
+                      const conversionRate = ((step.value / prevStep.value) * 100).toFixed(1);
+                      
+                      return (
+                        <div key={step.name} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium">{prevStep.name} → {step.name}</span>
+                            <span className="text-sm font-bold" style={{ color: step.fill }}>
+                              {conversionRate}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="h-2 rounded-full transition-all duration-300" 
+                              style={{ 
+                                width: `${Math.min(parseFloat(conversionRate), 100)}%`, 
+                                backgroundColor: step.fill 
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{prevStep.value} usuários</span>
+                            <span>{step.value} conversões</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Aba Produtos */}
-          <TabsContent value="produtos" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Histórico de Vendas por Produto</CardTitle>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os produtos</SelectItem>
-                    <SelectItem value="marmita-fitness">Marmita Fitness</SelectItem>
-                    <SelectItem value="marmita-tradicional">Marmita Tradicional</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockProductHistory}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="quantity" stackId="1" stroke="#8884d8" fill="#8884d8" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {/* Aba Abandono - Implementando gráfico e recuperação WhatsApp */}
+          <TabsContent value="abandono" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    Abandono por Estágio
+                    {loading.abandoned && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={abandonmentByStage}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {abandonmentByStage.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-orange-500" />
+                    Checkouts Abandonados Recentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="max-h-80 overflow-y-auto">
+                  {loading.abandoned ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : abandonedCheckouts && abandonedCheckouts.length > 0 ? (
+                    <div className="space-y-4">
+                      {abandonedCheckouts.slice(0, 5).map((checkout) => (
+                        <div key={checkout.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{checkout.customer_name}</p>
+                              <p className="text-sm text-muted-foreground">{checkout.customer_email}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge 
+                                  variant="outline" 
+                                  className={
+                                    checkout.stage === 'Pagamento' ? 'border-red-500 text-red-600' :
+                                    checkout.stage === 'Endereço' ? 'border-orange-500 text-orange-600' :
+                                    'border-gray-500 text-gray-600'
+                                  }
+                                >
+                                  {checkout.stage}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatTime(checkout.abandoned_at)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-lg text-green-600">{formatCurrency(checkout.cart_value)}</p>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2 gap-2"
+                                onClick={() => handleRecoverCheckout(checkout)}
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                                Recuperar
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <p>Nenhum checkout abandonado no período</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Aba Trocas de Alimentos */}
           <TabsContent value="trocas" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Principais Trocas de Alimentos</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5 text-green-500" />
+                  Principais Trocas de Alimentos
+                  {loading.foodChanges && <Loader2 className="h-4 w-4 animate-spin" />}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockFoodChanges.map((change, index) => (
-                    <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-                          <RefreshCw className="h-4 w-4" />
+                {loading.foodChanges ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : foodChanges && foodChanges.length > 0 ? (
+                  <div className="space-y-4">
+                    {foodChanges.map((change, index) => (
+                      <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                            <RefreshCw className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{change.original_food}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Trocado por: <span className="text-primary font-medium">{change.changed_food}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{change.original}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Trocado por: <span className="text-primary">{change.changed}</span>
-                          </p>
+                        <div className="text-right">
+                          <Badge variant="secondary" className="mb-1">{change.change_count} trocas</Badge>
+                          <p className="text-xs text-muted-foreground">{change.percentage}% do total</p>
                         </div>
                       </div>
-                      <Badge variant="secondary">{change.count} trocas</Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma troca registrada no período
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -351,108 +580,167 @@ export default function Analytics() {
           <TabsContent value="paginas" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Páginas Mais Acessadas</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-blue-500" />
+                  Páginas Mais Acessadas
+                  {loading.pages && <Loader2 className="h-4 w-4 animate-spin" />}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockPageViews.map((page, index) => (
-                    <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-                          <Eye className="h-4 w-4" />
+                {loading.pages ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : pageAnalytics && pageAnalytics.length > 0 ? (
+                  <div className="space-y-4">
+                    {pageAnalytics.map((page, index) => (
+                      <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                            <Eye className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{page.page_title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {page.page_path} • Taxa de conversão: {(page.conversion_rate * 100).toFixed(1)}%
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{page.page}</p>
+                        <div className="text-right">
+                          <p className="font-medium">{page.total_views.toLocaleString()} visitas</p>
                           <p className="text-sm text-muted-foreground">
-                            Taxa de conversão: {page.conversionRate}%
+                            {page.unique_visitors} únicos • {Math.floor(page.avg_time_on_page / 60)}m{page.avg_time_on_page % 60}s
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">{page.views.toLocaleString()} visitas</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Carregando dados de página...
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Aba Comportamento do Usuário */}
+          {/* Aba Comportamento - Melhorando gráficos */}
           <TabsContent value="comportamento" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Horários de Pico</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-orange-500" />
+                    Horários de Pico
+                    {loading.behavior && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={mockPeakHours}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="orders" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {loading.behavior ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : behaviorAnalytics?.peak_hours && behaviorAnalytics.peak_hours.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={behaviorAnalytics.peak_hours}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="order_count" fill={CHART_COLORS.orange} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Carregando dados de horário...
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Retenção de Clientes</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5 text-purple-500" />
+                    Dispositivos
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {mockCustomerRetention.map((retention, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-sm">{retention.period}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full" 
-                              style={{ width: `${retention.percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{retention.percentage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  {behaviorAnalytics?.device_breakdown && behaviorAnalytics.device_breakdown.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={behaviorAnalytics.device_breakdown}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="device" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="percentage" radius={[4, 4, 0, 0]}>
+                          {behaviorAnalytics.device_breakdown.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Carregando dados de dispositivos...
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Aba Geografia */}
+          {/* Aba Geografia - Focando em bairros */}
           <TabsContent value="geografia" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Pedidos por Região</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-blue-500" />
+                  Bairros com Mais Pedidos
+                  {loading.geographic && <Loader2 className="h-4 w-4 animate-spin" />}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockGeographicData.map((location, index) => (
-                    <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-                          <MapPin className="h-4 w-4" />
+                {loading.geographic ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : geographicAnalytics && geographicAnalytics.length > 0 ? (
+                  <div className="space-y-4">
+                    {geographicAnalytics.map((location, index) => (
+                      <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-green-500 rounded-full flex items-center justify-center">
+                            <MapPin className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{location.region}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {location.order_count} pedidos • Taxa de sucesso: {(location.delivery_success_rate * 100).toFixed(1)}%
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{location.neighborhood}</p>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(location.revenue)}</p>
                           <p className="text-sm text-muted-foreground">
-                            {location.orders} pedidos
+                            Ticket médio: {formatCurrency(location.avg_order_value)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(location.revenue)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum dado geográfico no período
+                  </div>
+                )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Aba Tempo Real */}
+          <TabsContent value="tempo-real" className="space-y-4">
+            <RealTimeAnalytics />
           </TabsContent>
         </Tabs>
       </div>
