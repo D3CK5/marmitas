@@ -55,37 +55,54 @@ export function useDashboard() {
 
         if (ordersError) throw ordersError;
 
-        // Buscar carrinhos REALMENTE abandonados
-        // Critério: Sessões que entraram no checkout, selecionaram endereço, 
-        // mas não finalizaram em 30 minutos
+        // Buscar checkouts abandonados do mês atual
+        // Critério: Sessões que chegaram até pagamento, mas não finalizaram em 30 minutos
         const thirtyMinutesAgo = new Date();
         thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
 
-        const { data: abandonedSessions, error: abandonedError } = await supabase
+        // Primeiro dia do mês atual
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        // Buscar sessões que chegaram até pagamento mas não finalizaram
+        const { data: potentialAbandoned, error: abandonedError } = await supabase
           .from('checkout_sessions')
-          .select('id, user_id, cart_items, total_value, checkout_entered_at, address_selected_at')
-          .not('checkout_entered_at', 'is', null) // Deve ter entrado no checkout
-          .not('address_selected_at', 'is', null) // Deve ter selecionado endereço
+          .select('id, user_id, cart_items, total_value, payment_method_selected_at')
+          .not('payment_method_selected_at', 'is', null) // Deve ter chegado até pagamento
           .is('completed_at', null) // Não deve ter completado
           .is('abandoned_at', null) // Não deve estar marcado como abandonado
-          .lt('address_selected_at', thirtyMinutesAgo.toISOString()); // Mais de 30 min desde seleção do endereço
+          .is('recovered_at', null) // Não deve estar marcado como recuperado
+          .gte('payment_method_selected_at', startOfMonth.toISOString()) // Do mês atual
+          .lt('payment_method_selected_at', thirtyMinutesAgo.toISOString()); // Mais de 30 min desde pagamento
 
         if (abandonedError) throw abandonedError;
 
         // Marcar sessões como abandonadas automaticamente
-        if (abandonedSessions && abandonedSessions.length > 0) {
-          const abandonedIds = abandonedSessions.map(session => session.id);
+        if (potentialAbandoned && potentialAbandoned.length > 0) {
+          const abandonedIds = potentialAbandoned.map(session => session.id);
           await supabase
             .from('checkout_sessions')
             .update({ abandoned_at: new Date().toISOString() })
             .in('id', abandonedIds);
         }
 
+        // Buscar total de checkouts abandonados do mês (não recuperados)
+        const { data: monthlyAbandoned, error: monthlyAbandonedError } = await supabase
+          .from('checkout_sessions')
+          .select('id')
+          .not('abandoned_at', 'is', null) // Deve estar marcado como abandonado
+          .is('recovered_at', null) // Não deve estar recuperado
+          .gte('abandoned_at', startOfMonth.toISOString()) // Do mês atual
+          .lte('abandoned_at', new Date().toISOString()); // Até agora
+
+        if (monthlyAbandonedError) throw monthlyAbandonedError;
+
         // Calcular estatísticas
         const ordersToday = todayOrders?.length || 0;
         const salesToday = todayOrders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
         const avgTicket = ordersToday > 0 ? salesToday / ordersToday : 0;
-        const abandonedCarts = abandonedSessions?.length || 0;
+        const abandonedCarts = (monthlyAbandoned?.length || 0) + (potentialAbandoned?.length || 0);
 
         return {
           salesToday,

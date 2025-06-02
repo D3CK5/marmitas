@@ -25,6 +25,25 @@ export function useOrders() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Função para marcar checkouts abandonados como recuperados
+  const markAbandonedAsRecovered = async (orderId: number) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('checkout_sessions')
+        .update({
+          recovered_at: new Date().toISOString(),
+          recovery_order_id: orderId
+        })
+        .eq('user_id', user.id)
+        .not('abandoned_at', 'is', null) // Deve estar abandonado
+        .is('recovered_at', null); // Não deve estar recuperado ainda
+    } catch (error) {
+      console.error('Erro ao marcar abandono como recuperado:', error);
+    }
+  };
+
   // Buscar pedidos do usuário
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", user?.id],
@@ -99,6 +118,9 @@ export function useOrders() {
           throw itemsError;
         }
 
+        // Marcar checkouts abandonados como recuperados
+        await markAbandonedAsRecovered(order.id);
+
         return order;
       } catch (error: any) {
         console.error('Erro ao criar pedido:', error);
@@ -107,6 +129,7 @@ export function useOrders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }); // Invalidar dashboard para atualizar abandono
       toast.success("Pedido criado com sucesso!");
     },
     onError: (error: any) => {

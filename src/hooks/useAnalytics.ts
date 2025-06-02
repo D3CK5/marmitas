@@ -113,9 +113,12 @@ export function useAnalytics(period: string = "30d") {
             abandoned_at,
             checkout_entered_at,
             address_selected_at,
-            payment_method_selected_at
+            payment_method_selected_at,
+            recovered_at
           `)
           .not('abandoned_at', 'is', null)
+          .not('payment_method_selected_at', 'is', null)
+          .is('recovered_at', null)
           .gte('abandoned_at', startDate.toISOString())
           .order('abandoned_at', { ascending: false });
 

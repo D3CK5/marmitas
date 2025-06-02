@@ -156,7 +156,7 @@ export default function Customers() {
     // Filtro de busca por texto
     const matchesSearch = 
       (customer?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (customer?.phone || '').includes(searchTerm);
     
     if (!matchesSearch) return false;

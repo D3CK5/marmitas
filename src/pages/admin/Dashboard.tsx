@@ -64,7 +64,7 @@ export default function Dashboard() {
     {
       title: "Checkout Abandonado",
       value: loadingStats ? "..." : dashboardStats?.abandonedCarts?.toString() || "0",
-      description: "Checkout não finalizado (30min)",
+      description: "Abandonos do mês não recuperados",
       icon: ShoppingBag,
       trend: "neutral" as const,
     },

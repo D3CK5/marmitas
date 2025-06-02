@@ -99,15 +99,15 @@ export function PaymentStep({ selectedAddressId, deliveryFee, total }: PaymentSt
       </div>
 
       {enabledPaymentMethods.length > 0 ? (
-        <RadioGroup
-          value={paymentMethod}
-          onValueChange={(value) => setPaymentMethod(value as "pix" | "credit_card")}
-          className="grid gap-4"
-        >
+      <RadioGroup
+        value={paymentMethod}
+        onValueChange={(value) => setPaymentMethod(value as "pix" | "credit_card")}
+        className="grid gap-4"
+      >
           {enabledPaymentMethods.map(([key, method]) => (
             <div key={key}>
               <RadioGroupItem value={key} id={key} className="peer sr-only" />
-              <Label
+          <Label
                 htmlFor={key}
                 className={`flex flex-col items-center justify-between rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
                   paymentMethod === key
@@ -116,7 +116,7 @@ export function PaymentStep({ selectedAddressId, deliveryFee, total }: PaymentSt
                       : "border-orange-500 bg-orange-50 text-orange-700"
                     : "border-gray-200 bg-white hover:border-orange-400 hover:bg-orange-50"
                 }`}
-              >
+          >
                 <span className="font-semibold text-lg">{method.title}</span>
                 <span className={`text-sm ${
                   paymentMethod === key 
@@ -124,11 +124,11 @@ export function PaymentStep({ selectedAddressId, deliveryFee, total }: PaymentSt
                     : "text-gray-500"
                 }`}>
                   {method.description}
-                </span>
-              </Label>
-            </div>
+            </span>
+          </Label>
+        </div>
           ))}
-        </RadioGroup>
+      </RadioGroup>
       ) : (
         <div className="text-center py-8">
           <p className="text-muted-foreground">Nenhum método de pagamento disponível no momento.</p>
@@ -136,21 +136,21 @@ export function PaymentStep({ selectedAddressId, deliveryFee, total }: PaymentSt
       )}
 
       {settings?.checkout_terms && settings.checkout_terms.length > 0 && (
-        <Card>
+      <Card>
           <CardHeader className="text-center">
-            <CardTitle>Termos e Condições</CardTitle>
-            <CardDescription>
-              Leia atentamente antes de finalizar o pedido
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+          <CardTitle>Termos e Condições</CardTitle>
+          <CardDescription>
+            Leia atentamente antes de finalizar o pedido
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               {settings.checkout_terms.map((term, index) => (
-                <li key={index}>{term}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+              <li key={index}>{term}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
       )}
 
       <Button 

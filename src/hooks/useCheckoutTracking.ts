@@ -166,6 +166,7 @@ export function useCheckoutTracking() {
       const currentSessionId = sessionId || localStorage.getItem('checkout_session_id');
       if (!currentSessionId) throw new Error('Sessão não encontrada');
 
+      // Marcar checkout atual como completado
       const { error } = await supabase
         .from('checkout_sessions')
         .update({
@@ -176,11 +177,42 @@ export function useCheckoutTracking() {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Marcar checkouts abandonados anteriores deste usuário como recuperados
+      await supabase
+        .from('checkout_sessions')
+        .update({
+          recovered_at: new Date().toISOString(),
+          recovery_order_id: orderId
+        })
+        .eq('user_id', user.id)
+        .not('abandoned_at', 'is', null) // Deve estar abandonado
+        .is('recovered_at', null) // Não deve estar recuperado ainda
+        .neq('session_id', currentSessionId); // Não é a sessão atual
       
       // Limpar sessão do localStorage
       localStorage.removeItem('checkout_session_id');
     }
   });
+
+  // Função para marcar abandono como recuperado (uso interno)
+  const markAbandonedAsRecovered = async (orderId: number) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('checkout_sessions')
+        .update({
+          recovered_at: new Date().toISOString(),
+          recovery_order_id: orderId
+        })
+        .eq('user_id', user.id)
+        .not('abandoned_at', 'is', null) // Deve estar abandonado
+        .is('recovered_at', null); // Não deve estar recuperado ainda
+    } catch (error) {
+      console.error('Erro ao marcar abandono como recuperado:', error);
+    }
+  };
 
   // Abandonar checkout (marcar como abandonado)
   const abandonCheckout = useMutation({
@@ -234,6 +266,7 @@ export function useCheckoutTracking() {
     selectPaymentMethod,
     completeCheckout,
     abandonCheckout,
-    getCurrentSession
+    getCurrentSession,
+    markAbandonedAsRecovered
   };
 } 

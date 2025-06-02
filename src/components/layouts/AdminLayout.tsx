@@ -105,26 +105,26 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
               return (
                 <div key={item.title}>
                   <div className="flex items-center">
-                    <Link
-                      to={item.href}
-                      className={cn(
+              <Link
+                to={item.href}
+                className={cn(
                         "flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                         (isActive || isSubmenuActive) && "bg-muted text-primary"
-                      )}
+                )}
                       onClick={onItemClick}
-                    >
+              >
                       <item.icon className="h-4 w-4" />
-                      {item.title}
-                    </Link>
-                  </div>
-                </div>
+                {item.title}
+              </Link>
+          </div>
+        </div>
               );
             })}
-          </div>
+      </div>
         </nav>
       </ScrollArea>
       <div className="mt-auto p-4">
-        <Button 
+        <Button
           variant="outline" 
           size="sm" 
           onClick={handleLogout}
@@ -144,29 +144,29 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
-        <SidebarContent />
+          <SidebarContent />
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button
+        <SheetTrigger asChild>
+          <Button
                 variant="outline"
-                size="icon"
+            size="icon"
                 className="shrink-0 md:hidden"
-              >
+          >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
+          </Button>
+        </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
               <SidebarContent onItemClick={() => setSidebarOpen(false)} />
-            </SheetContent>
-          </Sheet>
+        </SheetContent>
+      </Sheet>
         </header>
         <main className="flex-1 space-y-4 p-4 md:p-8">
           {children}
-        </main>
+      </main>
       </div>
     </div>
   );

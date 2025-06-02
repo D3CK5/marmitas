@@ -116,13 +116,13 @@ export function useCustomer() {
         const processedData = data?.map(item => {
           const customer = item.get_users_with_profiles || item;
           return {
-            ...customer,
-            full_name: customer.full_name || '',
-            email: customer.email || '',
-            phone: customer.phone || '',
-            total_spent: customer.total_spent || 0,
-            is_active: customer.is_active ?? true,
-            is_admin: customer.is_admin ?? false
+          ...customer,
+          full_name: customer.full_name || '',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          total_spent: customer.total_spent || 0,
+          is_active: customer.is_active ?? true,
+          is_admin: customer.is_admin ?? false
           };
         })
         .filter(customer => customer.id) // Filtrar itens sem ID

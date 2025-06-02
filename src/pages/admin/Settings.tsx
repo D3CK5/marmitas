@@ -119,14 +119,14 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 {settings?.payment_methods && Object.entries(settings.payment_methods).map(([key, method]) => (
                   <div key={key} className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold">{method.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {method.description}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={method.enabled}
+                      <div>
+                        <h4 className="font-semibold">{method.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {method.description}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={method.enabled}
                       onCheckedChange={() => handleTogglePaymentMethod(key as 'pix' | 'credit_card')}
                       disabled={isUpdating}
                     />
