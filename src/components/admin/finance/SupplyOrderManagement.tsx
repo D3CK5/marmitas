@@ -323,11 +323,11 @@ export function SupplyOrderManagement({ activeTab = "orders" }: SupplyOrderManag
 
   const getStatusBadge = (status: SupplyOrder['status']) => {
     const variants = {
-      pending: { variant: "secondary" as const, label: "Pendente", className: "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100" },
-      today: { variant: "default" as const, label: "Entrega Hoje", className: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100" },
-      delivered: { variant: "default" as const, label: "Entregue", className: "bg-green-100 text-green-800 border-green-200 hover:bg-green-100" },
-      overdue: { variant: "destructive" as const, label: "Atrasado", className: "bg-red-100 text-red-800 border-red-200 hover:bg-red-100" },
-      cancelled: { variant: "destructive" as const, label: "Cancelado", className: "bg-red-100 text-red-800 border-red-200 hover:bg-red-100" },
+      pending: { variant: "secondary" as const, label: "Pendente", className: "bg-orange-100 text-orange-800 border-orange-200" },
+      today: { variant: "default" as const, label: "Entrega Hoje", className: "bg-blue-100 text-blue-800 border-blue-200" },
+      delivered: { variant: "default" as const, label: "Entregue", className: "bg-green-100 text-green-800 border-green-200" },
+      overdue: { variant: "destructive" as const, label: "Atrasado", className: "bg-red-100 text-red-800 border-red-200" },
+      cancelled: { variant: "destructive" as const, label: "Cancelado", className: "bg-red-100 text-red-800 border-red-200" },
     };
     
     return variants[status];

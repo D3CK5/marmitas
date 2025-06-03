@@ -1,8 +1,9 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
+import { generateCartItemId } from "@/lib/utils";
 
 interface CartItem {
   id: number;
+  uniqueId: string; // ID único baseado no produto + configurações
   title: string;
   price: number;
   image: string;
@@ -12,9 +13,9 @@ interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">, quantity: number) => void;
-  removeItem: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  addItem: (item: Omit<CartItem, "quantity" | "uniqueId">, quantity: number) => void;
+  removeItem: (uniqueId: string) => void;
+  updateQuantity: (uniqueId: string, quantity: number) => void;
   clearCart: () => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -31,7 +32,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
-      setItems(JSON.parse(savedCart));
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        // Migrar dados antigos do carrinho se necessário
+        const migratedCart = parsedCart.map((item: any) => {
+          if (!item.uniqueId) {
+            return {
+              ...item,
+              uniqueId: generateCartItemId(item.id, item.notes)
+            };
+          }
+          return item;
+        });
+        setItems(migratedCart);
+      } catch (error) {
+        console.error("Erro ao carregar carrinho:", error);
+        setItems([]);
+      }
     }
   }, []);
 
@@ -40,31 +57,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
 
-  const addItem = (newItem: Omit<CartItem, "quantity">, quantity: number) => {
+  const addItem = (newItem: Omit<CartItem, "quantity" | "uniqueId">, quantity: number) => {
     setItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.id === newItem.id);
+      const uniqueId = generateCartItemId(newItem.id, newItem.notes);
+      const existingItem = currentItems.find((item) => item.uniqueId === uniqueId);
       
       if (existingItem) {
         return currentItems.map((item) =>
-          item.id === newItem.id
+          item.uniqueId === uniqueId
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
       
-      return [...currentItems, { ...newItem, quantity }];
+      return [...currentItems, { ...newItem, uniqueId, quantity }];
     });
-    setIsOpen(true);
   };
 
-  const removeItem = (id: number) => {
-    setItems((currentItems) => currentItems.filter((item) => item.id !== id));
+  const removeItem = (uniqueId: string) => {
+    setItems((currentItems) => currentItems.filter((item) => item.uniqueId !== uniqueId));
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (uniqueId: string, quantity: number) => {
     setItems((currentItems) =>
       currentItems.map((item) =>
-        item.id === id ? { ...item, quantity } : item
+        item.uniqueId === uniqueId ? { ...item, quantity } : item
       )
     );
   };

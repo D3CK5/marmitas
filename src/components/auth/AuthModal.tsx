@@ -70,15 +70,15 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
   if (user) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Olá, {user.full_name}!</DialogTitle>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md max-h-[90vh] overflow-hidden">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-lg sm:text-xl">Olá, {user.full_name}!</DialogTitle>
           </DialogHeader>
           
-          <div className="flex flex-col space-y-4 mt-4">
+          <div className="flex flex-col space-y-3 sm:space-y-4">
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-destructive"
+              className="w-full justify-start text-destructive h-12 sm:h-10"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-5 w-5" />
@@ -92,91 +92,97 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Acesse sua conta</DialogTitle>
+      <DialogContent className="w-[95vw] max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-lg sm:text-xl">Acesse sua conta</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(value: "login" | "register") => setActiveTab(value)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Cadastro</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-10 sm:h-9">
+            <TabsTrigger value="login" className="text-sm">Login</TabsTrigger>
+            <TabsTrigger value="register" className="text-sm">Cadastro</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4">
+          <TabsContent value="login" className="mt-4 sm:mt-6">
+            <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-11 sm:h-10" disabled={loading}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {loading ? "Entrando..." : "Entrar"}
+                <span className="text-sm">{loading ? "Entrando..." : "Entrar"}</span>
               </Button>
             </form>
           </TabsContent>
 
-          <TabsContent value="register">
-            <form onSubmit={handleRegister} className="space-y-4">
+          <TabsContent value="register" className="mt-4 sm:mt-6">
+            <form onSubmit={handleRegister} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
+                <Label htmlFor="register-email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="register-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="full_name">Nome completo</Label>
+                <Label htmlFor="full_name" className="text-sm font-medium">Nome completo</Label>
                 <Input
                   id="full_name"
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone" className="text-sm font-medium">Telefone</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-password">Senha</Label>
+                <Label htmlFor="register-password" className="text-sm font-medium">Senha</Label>
                 <Input
                   id="register-password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   required
+                  className="h-11 sm:h-10"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-11 sm:h-10" disabled={loading}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {loading ? "Cadastrando..." : "Cadastrar"}
+                <span className="text-sm">{loading ? "Cadastrando..." : "Cadastrar"}</span>
               </Button>
             </form>
           </TabsContent>

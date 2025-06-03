@@ -484,17 +484,17 @@ export function CustomerDetails({ customer, onUpdate }: CustomerDetailsProps) {
               <h3 className="font-semibold text-sm text-muted-foreground mb-3">Status da Conta</h3>
               <div className="flex flex-wrap gap-2">
                 {customer.is_active && (
-                  <Badge variant="secondary" className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">
                     Ativo
                   </Badge>
                 )}
                 {customer.email_verified && (
-                  <Badge variant="outline" className="bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
                     Email Verificado
                   </Badge>
                 )}
                 {customer.phone_verified && (
-                  <Badge variant="outline" className="bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
                     Telefone Verificado
                   </Badge>
                 )}

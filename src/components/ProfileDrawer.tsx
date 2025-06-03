@@ -30,22 +30,27 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[33vh] w-[75%] max-w-3xl mx-auto rounded-t-xl">
-        <SheetHeader className="text-left">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+      <SheetContent 
+        side="bottom" 
+        className="min-h-[40vh] max-h-[80vh] w-full sm:w-[75%] sm:max-w-3xl sm:mx-auto sm:rounded-t-xl overflow-y-auto"
+      >
+        <SheetHeader className="text-left pb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <Avatar className="h-16 w-16 flex-shrink-0">
               <AvatarImage src={user?.avatar_url || ""} />
               <AvatarFallback>
                 <User className="h-8 w-8" />
               </AvatarFallback>
             </Avatar>
-            <div className="space-y-2">
-              <SheetTitle>
+            <div className="space-y-2 flex-1 min-w-0">
+              <SheetTitle className="text-lg sm:text-xl">
                 {user ? `Olá, ${user.full_name}!` : "Minha Conta"}
               </SheetTitle>
               <Button 
                 onClick={() => handleNavigation(user ? "/minhaconta" : "/minhaconta/login")}
                 variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 {user ? "Acessar Conta" : "Entrar"}
               </Button>
@@ -53,51 +58,53 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
           </div>
         </SheetHeader>
         
-        <div className="mt-6 space-y-4">
+        <div className="space-y-2 pb-6">
           {user ? (
             <>
               <Button 
                 variant="ghost" 
-                className="w-full justify-start"
+                className="w-full justify-start h-12 text-base"
                 onClick={() => handleNavigation("/minhaconta")}
               >
-                <User className="mr-2 h-5 w-5" />
-                Minha Conta
+                <User className="mr-3 h-5 w-5 flex-shrink-0" />
+                <span>Minha Conta</span>
               </Button>
               
               <Button 
                 variant="ghost" 
-                className="w-full justify-start"
+                className="w-full justify-start h-12 text-base"
                 onClick={() => handleNavigation("/minhaconta/pedidos")}
               >
-                <Package className="mr-2 h-5 w-5" />
-                Meus Pedidos
+                <Package className="mr-3 h-5 w-5 flex-shrink-0" />
+                <span>Meus Pedidos</span>
               </Button>
               
               <Button 
                 variant="ghost" 
-                className="w-full justify-start"
+                className="w-full justify-start h-12 text-base"
                 onClick={() => handleNavigation("/minhaconta/enderecos")}
               >
-                <MapPin className="mr-2 h-5 w-5" />
-                Meus Endereços
+                <MapPin className="mr-3 h-5 w-5 flex-shrink-0" />
+                <span>Meus Endereços</span>
               </Button>
               
+              <div className="pt-2 border-t">
               <Button 
                 variant="ghost" 
-                className="w-full justify-start text-destructive"
+                  className="w-full justify-start h-12 text-base text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleLogout}
               >
-                <LogOut className="mr-2 h-5 w-5" />
-                Sair
+                  <LogOut className="mr-3 h-5 w-5 flex-shrink-0" />
+                  <span>Sair</span>
               </Button>
+              </div>
             </>
           ) : (
             <Button 
-              className="w-full"
+              className="w-full h-12 text-base"
               onClick={() => handleNavigation("/minhaconta/login")}
             >
-              <UserPlus className="mr-2 h-5 w-5" />
+              <UserPlus className="mr-3 h-5 w-5" />
               Criar Conta
             </Button>
           )}

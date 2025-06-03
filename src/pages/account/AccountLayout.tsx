@@ -8,7 +8,14 @@ export function AccountLayout() {
 
   // Se estiver carregando, mostra um estado de carregamento
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm sm:text-base text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   // Redirecionar para login se não estiver autenticado
@@ -18,7 +25,7 @@ export function AccountLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="pb-28">
+      <div className="pb-20 sm:pb-24 lg:pb-28">
         <Outlet />
       </div>
       

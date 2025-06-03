@@ -377,13 +377,15 @@ export default function Orders() {
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-4xl">
-                            <DialogHeader>
-                              <DialogTitle>Pedido #{order.id}</DialogTitle>
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader className="border-b pb-4">
+                              <DialogTitle className="text-xl font-semibold">Detalhes do Pedido</DialogTitle>
                             </DialogHeader>
-                            <OrderDetails 
-                              order={order}
-                            />
+                            <div className="py-4">
+                              <OrderDetails 
+                                order={order}
+                              />
+                            </div>
                           </DialogContent>
                         </Dialog>
                         <Button

@@ -88,6 +88,7 @@ export function AccountAddresses() {
     postal_code: '',
     city: '',
     state: '',
+    receiver: '',
     is_default: false,
     user_id: user?.id || ''
   });
@@ -116,6 +117,7 @@ export function AccountAddresses() {
         postal_code: '',
         city: '',
         state: '',
+        receiver: '',
         is_default: false,
         user_id: user?.id || ''
       });
@@ -177,88 +179,105 @@ export function AccountAddresses() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6">
       <AccountMenu />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
         <div>
-          <h1 className="text-2xl font-semibold">Meus Endereços</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold">Meus Endereços</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Gerencie seus endereços de entrega
           </p>
         </div>
-        <Button onClick={() => {
-          setSelectedAddress(null);
-          setAddressForm({
-            street: '',
-            number: '',
-            complement: '',
-            neighborhood: '',
-            postal_code: '',
-            city: '',
-            state: '',
-            is_default: false,
-            user_id: user?.id || ''
-          });
-          setIsAddressDialogOpen(true);
-        }}>
+        <Button 
+          size="sm"
+          className="self-start sm:self-auto"
+          onClick={() => {
+            setSelectedAddress(null);
+            setAddressForm({
+              street: '',
+              number: '',
+              complement: '',
+              neighborhood: '',
+              postal_code: '',
+              city: '',
+              state: '',
+              receiver: '',
+              is_default: false,
+              user_id: user?.id || ''
+            });
+            setIsAddressDialogOpen(true);
+          }}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Adicionar Endereço
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
         {addresses.map(address => (
-          <Card key={address.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 mt-1 text-primary" />
-                  <div>
+          <Card key={address.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mt-1 text-primary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
                     {address.is_default && (
-                      <Badge className="mb-2">Endereço Padrão</Badge>
+                      <Badge className="mb-2 text-xs">Endereço Padrão</Badge>
                     )}
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base break-words">
                       {address.street}, {address.number}
                     </p>
                     {address.complement && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground break-words">
                         {address.complement}
                       </p>
                     )}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {address.neighborhood}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {address.city} - {address.state}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       CEP: {address.postal_code}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-9"
                     onClick={() => {
                       setSelectedAddress(address);
-                      setAddressForm(address);
+                      setAddressForm({
+                        street: address.street || '',
+                        number: address.number || '',
+                        complement: address.complement || '',
+                        neighborhood: address.neighborhood || '',
+                        postal_code: address.postal_code || '',
+                        city: address.city || '',
+                        state: address.state || '',
+                        receiver: address.receiver || '',
+                        is_default: address.is_default || false,
+                        user_id: user?.id || ''
+                      });
                       setIsAddressDialogOpen(true);
                     }}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-destructive"
+                    className="h-8 w-8 sm:h-9 sm:w-9 text-destructive"
                     onClick={() => {
                       setSelectedAddress(address);
                       setIsDeleteDialogOpen(true);
                     }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>
@@ -267,25 +286,29 @@ export function AccountAddresses() {
         ))}
 
         {addresses.length === 0 && (
-          <div className="md:col-span-2 text-center py-10">
-            <p className="text-muted-foreground mb-4">
+          <div className="md:col-span-2 xl:col-span-3 text-center py-8 lg:py-12">
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               Você ainda não possui endereços cadastrados
             </p>
-            <Button onClick={() => {
-              setSelectedAddress(null);
-              setAddressForm({
-                street: '',
-                number: '',
-                complement: '',
-                neighborhood: '',
-                postal_code: '',
-                city: '',
-                state: '',
-                is_default: false,
-                user_id: user?.id || ''
-              });
-              setIsAddressDialogOpen(true);
-            }}>
+            <Button 
+              size="sm"
+              onClick={() => {
+                setSelectedAddress(null);
+                setAddressForm({
+                  street: '',
+                  number: '',
+                  complement: '',
+                  neighborhood: '',
+                  postal_code: '',
+                  city: '',
+                  state: '',
+                  receiver: '',
+                  is_default: false,
+                  user_id: user?.id || ''
+                });
+                setIsAddressDialogOpen(true);
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Endereço
             </Button>
@@ -293,170 +316,197 @@ export function AccountAddresses() {
         )}
       </div>
 
+      {/* Modal de Endereço */}
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="p-4 sm:p-6 pb-4">
+            <DialogTitle className="text-lg sm:text-xl">
               {selectedAddress ? 'Editar Endereço' : 'Adicionar Endereço'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAddressSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="postal_code">CEP</Label>
-              <div className="relative">
-                <IMaskInput
-                  id="postal_code"
-                  mask="00000-000"
-                  value={addressForm.postal_code}
-                  onAccept={(value) => {
-                    setAddressForm(prev => ({
+          
+          <ScrollArea className="max-h-[calc(90vh-120px)] px-4 sm:px-6">
+            <form onSubmit={handleAddressSubmit} className="space-y-4 pb-4">
+              <div className="space-y-2">
+                <Label htmlFor="receiver" className="text-sm font-medium">Destinatário</Label>
+                <Input
+                  id="receiver"
+                  value={addressForm.receiver}
+                  onChange={(e) => setAddressForm(prev => ({
+                    ...prev,
+                    receiver: e.target.value
+                  }))}
+                  placeholder="Nome de quem vai receber"
+                  className="h-10 sm:h-11"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="postal_code" className="text-sm font-medium">CEP</Label>
+                <div className="relative">
+                  <IMaskInput
+                    id="postal_code"
+                    mask="00000-000"
+                    value={addressForm.postal_code}
+                    onAccept={(value) => {
+                      setAddressForm(prev => ({
+                        ...prev,
+                        postal_code: value
+                      }));
+                      
+                      // Busca CEP quando o campo estiver com 9 caracteres (00000-000)
+                      if (value.length === 9) {
+                        searchCep(value);
+                      }
+                    }}
+                    className="flex h-10 sm:h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Informe o CEP"
+                  />
+                  {isLoadingCep && (
+                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-3 sm:top-3.5" />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="street" className="text-sm font-medium">Rua</Label>
+                <Input
+                  id="street"
+                  value={addressForm.street}
+                  onChange={(e) => setAddressForm(prev => ({
+                    ...prev,
+                    street: e.target.value
+                  }))}
+                  disabled={isLoadingCep}
+                  className="h-10 sm:h-11"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="number" className="text-sm font-medium">Número</Label>
+                  <Input
+                    id="number"
+                    value={addressForm.number}
+                    onChange={(e) => setAddressForm(prev => ({
                       ...prev,
-                      postal_code: value
-                    }));
-                    
-                    // Busca CEP quando o campo estiver com 9 caracteres (00000-000)
-                    if (value.length === 9) {
-                      searchCep(value);
-                    }
-                  }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Informe o CEP"
-                />
-                {isLoadingCep && (
-                  <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-3" />
-                )}
-              </div>
-            </div>
+                      number: e.target.value
+                    }))}
+                    className="h-10 sm:h-11"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="street">Rua</Label>
-              <Input
-                id="street"
-                value={addressForm.street}
-                onChange={(e) => setAddressForm(prev => ({
-                  ...prev,
-                  street: e.target.value
-                }))}
-                disabled={isLoadingCep}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="number">Número</Label>
-                <Input
-                  id="number"
-                  value={addressForm.number}
-                  onChange={(e) => setAddressForm(prev => ({
-                    ...prev,
-                    number: e.target.value
-                  }))}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="complement" className="text-sm font-medium">Complemento</Label>
+                  <Input
+                    id="complement"
+                    value={addressForm.complement}
+                    onChange={(e) => setAddressForm(prev => ({
+                      ...prev,
+                      complement: e.target.value
+                    }))}
+                    className="h-10 sm:h-11"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="complement">Complemento</Label>
+                <Label htmlFor="neighborhood" className="text-sm font-medium">Bairro</Label>
                 <Input
-                  id="complement"
-                  value={addressForm.complement}
+                  id="neighborhood"
+                  value={addressForm.neighborhood}
                   onChange={(e) => setAddressForm(prev => ({
                     ...prev,
-                    complement: e.target.value
-                  }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="neighborhood">Bairro</Label>
-              <Input
-                id="neighborhood"
-                value={addressForm.neighborhood}
-                onChange={(e) => setAddressForm(prev => ({
-                  ...prev,
-                  neighborhood: e.target.value
-                }))}
-                disabled={isLoadingCep}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">Cidade</Label>
-                <Input
-                  id="city"
-                  value={addressForm.city}
-                  onChange={(e) => setAddressForm(prev => ({
-                    ...prev,
-                    city: e.target.value
+                    neighborhood: e.target.value
                   }))}
                   disabled={isLoadingCep}
+                  className="h-10 sm:h-11"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="state">Estado</Label>
-                <Select
-                  value={addressForm.state}
-                  onValueChange={(value) => setAddressForm(prev => ({
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm font-medium">Cidade</Label>
+                  <Input
+                    id="city"
+                    value={addressForm.city}
+                    onChange={(e) => setAddressForm(prev => ({
+                      ...prev,
+                      city: e.target.value
+                    }))}
+                    disabled={isLoadingCep}
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-sm font-medium">Estado</Label>
+                  <Select
+                    value={addressForm.state}
+                    onValueChange={(value) => setAddressForm(prev => ({
+                      ...prev,
+                      state: value
+                    }))}
+                    disabled={isLoadingCep}
+                  >
+                    <SelectTrigger id="state" className="h-10 sm:h-11">
+                      <SelectValue placeholder="Selecione um estado" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-[300px] overflow-y-auto">
+                      {ESTADOS_BRASILEIROS.map((estado) => (
+                        <SelectItem key={estado.valor} value={estado.valor}>
+                          {estado.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="is_default"
+                  checked={addressForm.is_default}
+                  onChange={(e) => setAddressForm(prev => ({
                     ...prev,
-                    state: value
+                    is_default: e.target.checked
                   }))}
-                  disabled={isLoadingCep}
+                  className="w-4 h-4"
+                />
+                <Label htmlFor="is_default" className="text-sm">Definir como endereço padrão</Label>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddressDialogOpen(false)}
+                  className="order-2 sm:order-1"
                 >
-                  <SelectTrigger id="state">
-                    <SelectValue placeholder="Selecione um estado" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-[300px] overflow-y-auto">
-                    {ESTADOS_BRASILEIROS.map((estado) => (
-                      <SelectItem key={estado.valor} value={estado.valor}>
-                        {estado.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isLoading || isLoadingCep} size="sm" className="order-1 sm:order-2">
+                  {isLoading ? 'Salvando...' : 'Salvar'}
+                </Button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_default"
-                checked={addressForm.is_default}
-                onChange={(e) => setAddressForm(prev => ({
-                  ...prev,
-                  is_default: e.target.checked
-                }))}
-              />
-              <Label htmlFor="is_default">Definir como endereço padrão</Label>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsAddressDialogOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading || isLoadingCep}>
-                {isLoading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
-          </form>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Confirmação de Exclusão */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Endereço</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg">Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               Tem certeza que deseja excluir este endereço? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <AlertDialogCancel className="order-2 sm:order-1 mt-0">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (selectedAddress) {
@@ -464,7 +514,7 @@ export function AccountAddresses() {
                 }
                 setIsDeleteDialogOpen(false);
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="order-1 sm:order-2 bg-destructive hover:bg-destructive/90"
             >
               Excluir
             </AlertDialogAction>

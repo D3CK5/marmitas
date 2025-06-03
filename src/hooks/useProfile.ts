@@ -21,7 +21,7 @@ interface Profile {
   last_purchase: string | null;
 }
 
-interface Address {
+export interface Address {
   id: string;
   user_id: string;
   receiver: string;
@@ -38,29 +38,35 @@ interface Address {
   deleted_at?: string | null;
 }
 
-interface OrderItem {
+export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  price: number; // Alias para compatibilidade
+  notes?: string; // Campo para trocas de alimentos
   product: {
     title: string;
     image_url: string;
   };
 }
 
-interface Order {
+export interface Order {
   id: string;
   user_id: string;
   status: string;
   total: number;
+  subtotal?: number;
+  delivery_fee?: number;
   payment_method: string;
   payment_status: string;
   delivery_address: Address;
   created_at: string;
   updated_at: string;
+  status_changed_at?: string;
+  completed_at?: string | null; // Data quando foi marcado como concluído
   items: OrderItem[];
 }
 
@@ -124,7 +130,7 @@ export function useProfile() {
   } = useQuery({
     queryKey: ["user-orders", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_user_orders_with_items", {
+      const { data, error } = await supabase.rpc("get_user_orders_with_details", {
         p_user_id: user?.id
       });
 
@@ -136,7 +142,7 @@ export function useProfile() {
       return data as Order[];
     },
     enabled: !!user,
-    staleTime: 1000 * 60 // 1 minute
+    staleTime: 0 // Remove cache para forçar nova busca
   });
 
   const { mutateAsync: updateProfile } = useMutation({

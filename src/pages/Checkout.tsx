@@ -11,6 +11,7 @@ import { PaymentStep } from "@/components/checkout/PaymentStep";
 import { Steps } from "@/components/checkout/Steps";
 import { QuantityCounter } from "@/components/QuantityCounter";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatFoodChanges } from "@/lib/utils";
 
 type CheckoutStep = "auth" | "address" | "payment";
 
@@ -46,7 +47,7 @@ export default function Checkout() {
         <div className="space-y-4">
           <div className="space-y-2">
             {items.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-4">
+              <div key={item.uniqueId} className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <img
@@ -65,7 +66,7 @@ export default function Checkout() {
                     </p>
                     {item.notes && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        Obs: {item.notes}
+                        {formatFoodChanges(item.notes)}
                       </p>
                     )}
                   </div>
@@ -124,7 +125,13 @@ export default function Checkout() {
           <Steps steps={steps} currentStep={currentStep} />
           
           <div className="mt-8 grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            {/* Resumo do Pedido - Primeiro em dispositivos móveis */}
+            <div className="order-1 md:order-2 md:sticky md:top-20">
+              <OrderSummary />
+            </div>
+            
+            {/* Formulários - Segundo em dispositivos móveis */}
+            <div className="order-2 md:order-1 bg-white rounded-lg shadow-sm p-6">
               {currentStep === "auth" && (
                 <AuthStep onComplete={() => setCurrentStep("address")} />
               )}
@@ -146,10 +153,6 @@ export default function Checkout() {
                   total={total}
                 />
               )}
-            </div>
-            
-            <div className="md:sticky md:top-20">
-              <OrderSummary />
             </div>
           </div>
         </div>

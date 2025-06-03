@@ -126,30 +126,33 @@ export function AccountProfile() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6">
       <AccountMenu />
       
-      <div>
-        <h1 className="text-2xl font-semibold">Meus Dados</h1>
-        <p className="text-muted-foreground">Gerencie suas informações pessoais e senha</p>
+      <div className="px-2 sm:px-0">
+        <h1 className="text-xl sm:text-2xl font-semibold">Meus Dados</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          Gerencie suas informações pessoais e senha
+        </p>
       </div>
 
+      {/* Foto de Perfil */}
       <Card>
-        <CardHeader>
-          <CardTitle>Foto de Perfil</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Foto de Perfil</CardTitle>
+          <CardDescription className="text-sm">
             Sua foto será exibida em seu perfil e em suas avaliações
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
+        <CardContent className="pt-0">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+            <Avatar className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0">
               <AvatarImage src={user?.avatar_url || ""} />
               <AvatarFallback>
-                <User className="h-12 w-12" />
+                <User className="h-10 w-10 sm:h-12 sm:w-12" />
               </AvatarFallback>
             </Avatar>
-            <div className="space-y-2">
+            <div className="space-y-2 text-center sm:text-left w-full sm:w-auto">
               <Input
                 id="avatar"
                 type="file"
@@ -160,14 +163,15 @@ export function AccountProfile() {
               />
               <Button 
                 variant="outline" 
-                className="cursor-pointer" 
+                size="sm"
+                className="cursor-pointer w-full sm:w-auto" 
                 disabled={isProfileLoading || isLoading}
                 onClick={() => document.getElementById('avatar')?.click()}
               >
                 <Upload className="w-4 h-4 mr-2" />
                 {isProfileLoading || isLoading ? 'Enviando...' : 'Alterar foto'}
               </Button>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-xs">
                 Formatos aceitos: JPG, PNG. Tamanho máximo: 2MB
               </p>
             </div>
@@ -175,18 +179,19 @@ export function AccountProfile() {
         </CardContent>
       </Card>
 
+      {/* Informações Pessoais */}
       <Card>
-        <CardHeader>
-          <CardTitle>Informações Pessoais</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Informações Pessoais</CardTitle>
+          <CardDescription className="text-sm">
             Mantenha seus dados atualizados para receber novidades e promoções
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="pt-0">
+          <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4 sm:space-y-6">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="full_name" className="flex items-center gap-2">
+                <Label htmlFor="full_name" className="flex items-center gap-2 text-sm font-medium">
                   <User className="w-4 h-4" />
                   Nome completo
                 </Label>
@@ -194,17 +199,18 @@ export function AccountProfile() {
                   id="full_name"
                   {...profileForm.register("full_name")}
                   disabled={isLoading}
+                  className="h-10 sm:h-11"
                 />
                 {profileForm.formState.errors.full_name && (
-                  <p className="text-sm text-destructive flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {getErrorMessage(profileForm.formState.errors.full_name)}
+                  <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span>{getErrorMessage(profileForm.formState.errors.full_name)}</span>
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
+                <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
                   <Mail className="w-4 h-4" />
                   Email
                 </Label>
@@ -213,17 +219,18 @@ export function AccountProfile() {
                   type="email"
                   {...profileForm.register("email")}
                   disabled={isLoading}
+                  className="h-10 sm:h-11"
                 />
                 {profileForm.formState.errors.email && (
-                  <p className="text-sm text-destructive flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {getErrorMessage(profileForm.formState.errors.email)}
+                  <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span>{getErrorMessage(profileForm.formState.errors.email)}</span>
                   </p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2">
+              <div className="space-y-2 lg:col-span-2">
+                <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
                   <Phone className="w-4 h-4" />
                   Telefone
                 </Label>
@@ -235,23 +242,23 @@ export function AccountProfile() {
                   onAccept={(value) => {
                     profileForm.setValue("phone", value, { shouldValidate: true });
                   }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 sm:h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isLoading}
                 />
                 {profileForm.formState.errors.phone && (
-                  <p className="text-sm text-destructive flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {getErrorMessage(profileForm.formState.errors.phone)}
+                  <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span>{getErrorMessage(profileForm.formState.errors.phone)}</span>
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading} size="sm">
                       {isLoading ? (
                         "Salvando..."
                       ) : (
@@ -272,24 +279,25 @@ export function AccountProfile() {
         </CardContent>
       </Card>
 
+      {/* Alterar Senha */}
       <Card>
-        <CardHeader>
-          <CardTitle>Alterar Senha</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Alterar Senha</CardTitle>
+          <CardDescription className="text-sm">
             Mantenha sua senha segura e atualizada regularmente
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {!isEditingPassword ? (
-            <Button variant="outline" onClick={() => setIsEditingPassword(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsEditingPassword(true)}>
               <Lock className="w-4 h-4 mr-2" />
               Alterar senha
             </Button>
           ) : (
-            <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword" className="flex items-center gap-2">
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4 sm:space-y-6">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+                <div className="space-y-2 lg:col-span-2">
+                  <Label htmlFor="currentPassword" className="flex items-center gap-2 text-sm font-medium">
                     <Lock className="w-4 h-4" />
                     Senha atual
                   </Label>
@@ -299,6 +307,7 @@ export function AccountProfile() {
                       type={showPassword.current ? "text" : "password"}
                       {...passwordForm.register("currentPassword")}
                       disabled={isLoading}
+                      className="h-10 sm:h-11 pr-12"
                     />
                     <Button
                       type="button"
@@ -315,15 +324,15 @@ export function AccountProfile() {
                     </Button>
                   </div>
                   {passwordForm.formState.errors.currentPassword && (
-                    <p className="text-sm text-destructive flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {getErrorMessage(passwordForm.formState.errors.currentPassword)}
+                    <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span>{getErrorMessage(passwordForm.formState.errors.currentPassword)}</span>
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="flex items-center gap-2">
+                  <Label htmlFor="newPassword" className="flex items-center gap-2 text-sm font-medium">
                     <Lock className="w-4 h-4" />
                     Nova senha
                   </Label>
@@ -333,6 +342,7 @@ export function AccountProfile() {
                       type={showPassword.new ? "text" : "password"}
                       {...passwordForm.register("newPassword")}
                       disabled={isLoading}
+                      className="h-10 sm:h-11 pr-12"
                     />
                     <Button
                       type="button"
@@ -349,15 +359,15 @@ export function AccountProfile() {
                     </Button>
                   </div>
                   {passwordForm.formState.errors.newPassword && (
-                    <p className="text-sm text-destructive flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {getErrorMessage(passwordForm.formState.errors.newPassword)}
+                    <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span>{getErrorMessage(passwordForm.formState.errors.newPassword)}</span>
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                  <Label htmlFor="confirmPassword" className="flex items-center gap-2 text-sm font-medium">
                     <Lock className="w-4 h-4" />
                     Confirmar nova senha
                   </Label>
@@ -367,6 +377,7 @@ export function AccountProfile() {
                       type={showPassword.confirm ? "text" : "password"}
                       {...passwordForm.register("confirmPassword")}
                       disabled={isLoading}
+                      className="h-10 sm:h-11 pr-12"
                     />
                     <Button
                       type="button"
@@ -383,30 +394,32 @@ export function AccountProfile() {
                     </Button>
                   </div>
                   {passwordForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-destructive flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {getErrorMessage(passwordForm.formState.errors.confirmPassword)}
+                    <p className="text-xs sm:text-sm text-destructive flex items-center gap-2">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span>{getErrorMessage(passwordForm.formState.errors.confirmPassword)}</span>
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
+                  size="sm"
                   onClick={() => {
                     setIsEditingPassword(false);
                     passwordForm.reset();
                   }}
                   disabled={isLoading}
+                  className="order-2 sm:order-1"
                 >
                   Cancelar
                 </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button type="submit" disabled={isLoading}>
+                      <Button type="submit" disabled={isLoading} size="sm" className="order-1 sm:order-2">
                         {isLoading ? (
                           "Salvando..."
                         ) : (

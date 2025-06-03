@@ -129,6 +129,10 @@ export function ProductForm({ onSubmit, initialData }: ProductFormProps) {
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleFoodChangesToggle = (value: boolean) => {
