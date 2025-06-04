@@ -543,11 +543,6 @@ CREATE INDEX idx_user_verifications_code ON public.user_verifications(code);
 -- 9. FOREIGN KEY CONSTRAINTS ADICIONAIS
 -- ======================================
 
--- Foreign key adicional para orders -> profiles
-ALTER TABLE public.orders 
-ADD CONSTRAINT fk_orders_user_id 
-FOREIGN KEY (user_id) REFERENCES public.profiles(id);
-
 -- ======================================
 -- 10. STORAGE BUCKETS
 -- ======================================
